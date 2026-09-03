@@ -5,7 +5,17 @@ import { ManifestResponse } from "@/lib/api";
 import VariableSelector from "./VariableSelector";
 import DepthSlider from "./DepthSlider";
 import TimeSlider from "./TimeSlider";
-import { Sliders, Eye, Navigation, X, Anchor, MapPin } from "lucide-react";
+import {
+  Sliders,
+  Eye,
+  Navigation,
+  X,
+  Anchor,
+  MapPin,
+  Box,
+  Layers as LayersIcon,
+  Maximize2,
+} from "lucide-react";
 
 interface SidebarProps {
   manifest?: ManifestResponse;
@@ -19,7 +29,11 @@ interface SidebarProps {
   onToggleArgo: () => void;
   showGliders: boolean;
   onToggleGliders: () => void;
-  onFlyToRegion: (lat: number, lon: number, height: number) => void;
+  onFlyToRegion: (lat: number, lon: number, height: number, pitch?: number, heading?: number) => void;
+  viewMode: "single" | "volumetric";
+  onViewModeChange: (mode: "single" | "volumetric") => void;
+  verticalExaggeration: number;
+  onExaggerationChange: (val: number) => void;
   isOpen: boolean;
   onClose: () => void;
   isLoading?: boolean;
@@ -38,6 +52,10 @@ export default function Sidebar({
   showGliders,
   onToggleGliders,
   onFlyToRegion,
+  viewMode,
+  onViewModeChange,
+  verticalExaggeration,
+  onExaggerationChange,
   isOpen,
   onClose,
   isLoading,
@@ -75,12 +93,86 @@ export default function Sidebar({
           isLoading={isLoading}
         />
 
-        {/* 2. Depth Slider */}
-        <DepthSlider
-          depthLevels={depthLevels}
-          depthIndex={depthIndex}
-          onDepthChange={onDepthChange}
-        />
+        {/* 2. Visualization Mode Switch: 2D Single Slice vs 3D Volumetric Water Column */}
+        <div className="space-y-2 p-3 rounded-xl ocean-glass-subtle border border-cyan-500/20">
+          <div className="flex items-center justify-between text-xs text-slate-300 font-semibold uppercase tracking-wider">
+            <span>Display Mode</span>
+            <span className="text-[10px] text-cyan-400 font-mono font-bold">
+              {viewMode === "volumetric" ? "3D Multi-Layer" : "2D Single Layer"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => onViewModeChange("single")}
+              className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-semibold transition-all border ${
+                viewMode === "single"
+                  ? "bg-cyan-950/90 border-cyan-400 text-white shadow-md shadow-cyan-900/40"
+                  : "bg-slate-900/60 border-slate-700/60 text-slate-400 hover:text-white"
+              }`}
+            >
+              <LayersIcon className="w-3.5 h-3.5" />
+              <span>Single Depth</span>
+            </button>
+
+            <button
+              onClick={() => {
+                onViewModeChange("volumetric");
+                // Automatically tilt camera to showcase the 3D stack
+                onFlyToRegion(15.0, 78.0, 3200000, -45, 10);
+              }}
+              className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-semibold transition-all border ${
+                viewMode === "volumetric"
+                  ? "bg-gradient-to-r from-teal-900 to-cyan-950 border-emerald-400 text-white shadow-md shadow-teal-900/50 ring-1 ring-emerald-400/40"
+                  : "bg-slate-900/60 border-slate-700/60 text-slate-400 hover:text-white"
+              }`}
+            >
+              <Box className="w-3.5 h-3.5 text-emerald-400" />
+              <span>3D Volumetric</span>
+            </button>
+          </div>
+
+          {/* If Volumetric Mode: Show Vertical Exaggeration Slider & 3D Tilt Helper */}
+          {viewMode === "volumetric" ? (
+            <div className="pt-2 space-y-2 border-t border-slate-800">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-300 font-medium">Vertical Exaggeration:</span>
+                <span className="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 font-mono font-bold">
+                  {verticalExaggeration}x
+                </span>
+              </div>
+              <input
+                type="range"
+                min={50}
+                max={400}
+                step={25}
+                value={verticalExaggeration}
+                onChange={(e) => onExaggerationChange(parseInt(e.target.value, 10))}
+                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-400"
+              />
+              <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                <span>50x</span>
+                <span>Stack: 0m, 50m, 200m, 1000m</span>
+                <span>400x</span>
+              </div>
+
+              <button
+                onClick={() => onFlyToRegion(14.5, 78.5, 3000000, -38, 15)}
+                className="w-full mt-1 py-1.5 px-2 rounded-lg bg-teal-950/70 hover:bg-teal-900/90 border border-teal-500/40 text-[11px] text-teal-300 flex items-center justify-center gap-1.5 transition-all"
+              >
+                <Maximize2 className="w-3 h-3" />
+                <span>Perspective 3D Water Column Tilt</span>
+              </button>
+            </div>
+          ) : (
+            /* If Single Mode: Show standard Depth Slider */
+            <DepthSlider
+              depthLevels={depthLevels}
+              depthIndex={depthIndex}
+              onDepthChange={onDepthChange}
+            />
+          )}
+        </div>
 
         {/* 3. Time Slider & Animation */}
         <TimeSlider
@@ -161,25 +253,25 @@ export default function Sidebar({
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             <button
-              onClick={() => onFlyToRegion(15.5, 79.0, 2600000)}
+              onClick={() => onFlyToRegion(15.5, 79.0, 2600000, -85, 0)}
               className="px-2 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-[11px] text-slate-300 hover:text-white transition-all text-center"
             >
               🇮🇳 Entire EEZ
             </button>
             <button
-              onClick={() => onFlyToRegion(16.0, 71.5, 1500000)}
+              onClick={() => onFlyToRegion(16.0, 71.5, 1500000, -55, 30)}
               className="px-2 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-[11px] text-slate-300 hover:text-white transition-all text-center"
             >
               🌊 Arabian Sea
             </button>
             <button
-              onClick={() => onFlyToRegion(15.0, 86.5, 1600000)}
+              onClick={() => onFlyToRegion(15.0, 86.5, 1600000, -55, -30)}
               className="px-2 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-[11px] text-slate-300 hover:text-white transition-all text-center"
             >
               🌀 Bay of Bengal
             </button>
             <button
-              onClick={() => onFlyToRegion(10.5, 73.5, 1100000)}
+              onClick={() => onFlyToRegion(10.5, 73.5, 1100000, -60, 20)}
               className="px-2 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-[11px] text-slate-300 hover:text-white transition-all text-center"
             >
               🏝️ Lakshadweep

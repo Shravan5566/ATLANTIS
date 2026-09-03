@@ -16,10 +16,17 @@ export default function Home() {
   const [timeIndex, setTimeIndex] = useState(0);
   const [showArgo, setShowArgo] = useState(true);
   const [showGliders, setShowGliders] = useState(true);
+
+  // Volumetric water column states
+  const [viewMode, setViewMode] = useState<"single" | "volumetric">("single");
+  const [verticalExaggeration, setVerticalExaggeration] = useState(150);
+
   const [cameraTrigger, setCameraTrigger] = useState<{
     lat: number;
     lon: number;
     height: number;
+    pitch?: number;
+    heading?: number;
     key: number;
   } | null>(null);
 
@@ -38,12 +45,14 @@ export default function Home() {
     queryFn: getManifest,
   });
 
-  const depthLevels = manifest?.depth_levels || [0.5, 5, 10, 20, 50, 100, 200, 500, 1000];
-  const currentDepth = depthLevels[depthIndex] ?? 0.5;
-  const currentVariableMeta = manifest?.variables[selectedVariable];
-
-  const handleFlyToRegion = (lat: number, lon: number, height: number) => {
-    setCameraTrigger({ lat, lon, height, key: Date.now() });
+  const handleFlyToRegion = (
+    lat: number,
+    lon: number,
+    height: number,
+    pitch: number = -85,
+    heading: number = 0
+  ) => {
+    setCameraTrigger({ lat, lon, height, pitch, heading, key: Date.now() });
   };
 
   return (
@@ -68,6 +77,10 @@ export default function Home() {
         showGliders={showGliders}
         onToggleGliders={() => setShowGliders(!showGliders)}
         onFlyToRegion={handleFlyToRegion}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        verticalExaggeration={verticalExaggeration}
+        onExaggerationChange={setVerticalExaggeration}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         isLoading={isManifestLoading}
@@ -87,6 +100,8 @@ export default function Home() {
           depthIndex={depthIndex}
           timeIndex={timeIndex}
           manifest={manifest}
+          viewMode={viewMode}
+          verticalExaggeration={verticalExaggeration}
           cameraTrigger={cameraTrigger}
         />
       </main>

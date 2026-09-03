@@ -23,7 +23,9 @@ interface GlobeWrapperProps {
   depthIndex: number;
   timeIndex: number;
   manifest?: ManifestResponse;
-  cameraTrigger?: { lat: number; lon: number; height: number; key: number } | null;
+  viewMode: "single" | "volumetric";
+  verticalExaggeration: number;
+  cameraTrigger?: { lat: number; lon: number; height: number; pitch?: number; heading?: number; key: number } | null;
 }
 
 export default function GlobeWrapper(props: GlobeWrapperProps) {
