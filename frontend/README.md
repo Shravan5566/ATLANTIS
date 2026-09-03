@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ATLANTIS — India EEZ Ocean Visualization Platform (Frontend)
 
-## Getting Started
+Interactive 3D geospatial ocean exploration interface built with **Next.js (App Router, TypeScript)**, **Tailwind CSS**, **CesiumJS / Resium**, and **Recharts**.
 
-First, run the development server:
+---
 
+## 🔑 Cesium ion Access Token Setup
+
+To render Cesium 3D world terrain, global satellite basemaps, and geospatial layers:
+
+> [!NOTE]
+> Get a free Cesium ion access token at [https://ion.cesium.com](https://ion.cesium.com) (free tier), then set `NEXT_PUBLIC_CESIUM_ION_TOKEN` in `.env.local`.
+
+Copy the template:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.local.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+And edit `.env.local`:
+```env
+NEXT_PUBLIC_CESIUM_ION_TOKEN=your_token_here
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🚀 Running the Frontend Locally
 
-## Learn More
+```bash
+# Install dependencies
+npm install
 
-To learn more about Next.js, take a look at the following resources:
+# Run Next.js development server
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open [http://localhost:3000](http://localhost:3000) to explore the 3D globe.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🏛️ Modular Component Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+├── app/
+│   ├── layout.tsx         # Oceanic dark layout + React Query Providers + ATLANTIS Favicon
+│   ├── page.tsx           # Main application state and layout coordinator
+│   └── globals.css        # Oceanic theme tokens, glassmorphic styling, Cesium widgets CSS
+├── components/
+│   ├── Navbar.tsx         # Top bar with ATLANTIS logo, EEZ scope, and API link
+│   ├── Sidebar.tsx        # Left collapsible controls drawer
+│   ├── VariableSelector.tsx # Parameter selection (Temperature, Salinity, Current Velocity)
+│   ├── DepthSlider.tsx    # Depth layer stepping (0.5m to 1000m)
+│   ├── TimeSlider.tsx     # Timestep selector and 4D animation loop
+│   ├── Colorbar.tsx       # Top-right interactive gradient legend
+│   ├── InfoBar.tsx        # Bottom inspection bar (Lat, Lon, Depth, and live values)
+│   ├── Globe.tsx          # Full-screen 3D Cesium viewer centered on India EEZ
+│   ├── GlobeWrapper.tsx   # SSR-safe dynamic wrapper
+│   └── Providers.tsx      # React Query Provider setup
+└── lib/
+    └── api.ts             # Typed API client matching FastAPI backend models
+```
