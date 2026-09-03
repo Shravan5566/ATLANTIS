@@ -45,7 +45,9 @@ data-pipeline/raw/*.nc4
 data-pipeline/raw/*.hdf5
 data-pipeline/raw/*.csv
 data-pipeline/processed/argo_profiles.json
+data-pipeline/processed/tiles/**/*.json
 data-pipeline/processed/tiles/**/*.json.gz
+!data-pipeline/processed/tiles/manifest.json
 
 # IDE & OS
 .vscode/
