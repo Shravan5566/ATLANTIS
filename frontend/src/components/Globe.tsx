@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import * as Cesium from "cesium";
 import {
   Viewer as ResiumViewer,
@@ -10,7 +10,15 @@ import {
   ScreenSpaceEvent,
 } from "resium";
 import { useQuery } from "@tanstack/react-query";
-import { getField, FieldTileResponse, ManifestResponse } from "@/lib/api";
+import {
+  getField,
+  getArgoPositions,
+  getGliderTracks,
+  FieldTileResponse,
+  ManifestResponse,
+  ArgoPositionItem,
+  GliderTrackItem,
+} from "@/lib/api";
 import { gridToCanvas } from "@/lib/colors";
 import { HoverInfo } from "./InfoBar";
 import { Loader2, Layers } from "lucide-react";
@@ -32,6 +40,10 @@ interface GlobeProps {
   manifest?: ManifestResponse;
   viewMode: "single" | "volumetric";
   verticalExaggeration: number;
+  showArgo: boolean;
+  showGliders: boolean;
+  onSelectFloat: (float: ArgoPositionItem) => void;
+  selectedFloatId?: string;
   cameraTrigger?: { lat: number; lon: number; height: number; pitch?: number; heading?: number; key: number } | null;
 }
 
@@ -56,6 +68,10 @@ export default function Globe({
   manifest,
   viewMode,
   verticalExaggeration,
+  showArgo,
+  showGliders,
+  onSelectFloat,
+  selectedFloatId,
   cameraTrigger,
 }: GlobeProps) {
   const viewerRef = useRef<Cesium.Viewer | null>(null);
@@ -84,7 +100,7 @@ export default function Globe({
     enabled: viewMode === "single",
   });
 
-  // 2. Query volumetric depth slices (4 canonical depths across water column)
+  // 2. Query volumetric depth slices
   const [volumetricSlices, setVolumetricSlices] = useState<FieldTileResponse[]>([]);
   const [isVolumetricLoading, setIsVolumetricLoading] = useState(false);
 
@@ -110,6 +126,20 @@ export default function Globe({
     };
   }, [viewMode, selectedVariable, timeIndex]);
 
+  // 3. Query Argo Float Positions
+  const { data: argoPositions } = useQuery<ArgoPositionItem[]>({
+    queryKey: ["argo-positions"],
+    queryFn: getArgoPositions,
+    staleTime: 1000 * 60 * 10,
+  });
+
+  // 4. Query Glider Tracks
+  const { data: gliderTracks } = useQuery<GliderTrackItem[]>({
+    queryKey: ["glider-tracks"],
+    queryFn: getGliderTracks,
+    staleTime: 1000 * 60 * 10,
+  });
+
   const currentVariableMeta = manifest?.variables[selectedVariable];
   const depthLevels = manifest?.depth_levels || [0.5];
   const currentDepth = depthLevels[depthIndex] ?? 0.5;
@@ -119,7 +149,6 @@ export default function Globe({
     if (!viewer) return;
     viewerRef.current = viewer;
 
-    // Center camera looking over India EEZ
     viewer.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(79.0, 15.5, 2600000),
       orientation: {
@@ -132,8 +161,6 @@ export default function Globe({
 
     viewer.scene.globe.enableLighting = true;
     viewer.scene.globe.depthTestAgainstTerrain = false;
-
-    // Enable subsurface translucency for looking into the water column
     viewer.scene.globe.translucency.enabled = true;
     viewer.scene.globe.translucency.frontFaceAlpha = 0.55;
     viewer.scene.globe.translucency.backFaceAlpha = 0.35;
@@ -158,7 +185,7 @@ export default function Globe({
     }
   }, [cameraTrigger]);
 
-  // Clean up volumetric entities when exiting volumetric mode
+  // Clean up volumetric entities
   const clearVolumetricEntities = useCallback(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
@@ -174,19 +201,16 @@ export default function Globe({
     if (!viewer) return;
 
     if (viewMode === "volumetric") {
-      // Hide 2D imagery layer when in volumetric mode
       if (activeLayerRef.current && viewer.imageryLayers.contains(activeLayerRef.current)) {
         activeLayerRef.current.show = false;
       }
       return;
     }
 
-    // Restore single imagery layer visibility
     if (activeLayerRef.current && viewer.imageryLayers.contains(activeLayerRef.current)) {
       activeLayerRef.current.show = true;
     }
 
-    // Clean up any volumetric entities when in single mode
     clearVolumetricEntities();
 
     if (!tileData || !tileData.values) return;
@@ -263,14 +287,11 @@ export default function Globe({
       if (!slice.values) return;
       const depthMeter = VOLUMETRIC_DEPTH_METERS[idx] ?? 0;
       const labelText = VOLUMETRIC_LABELS[idx] ?? `${depthMeter}m`;
-
-      // Negative altitude exaggerated for visual water column depth
       const altitude = -(depthMeter * verticalExaggeration);
 
       const canvas = gridToCanvas(slice.values, minVal, maxVal, palette, 384, 384);
       const dataUrl = canvas.toDataURL("image/png");
 
-      // 1. Semi-transparent depth-slice plane
       const sliceEntity = viewer.entities.add({
         name: `Volumetric Slice ${labelText}`,
         rectangle: {
@@ -288,7 +309,6 @@ export default function Globe({
       });
       createdEntities.push(sliceEntity);
 
-      // 2. 3D depth label anchored to the corner of the slice
       const labelEntity = viewer.entities.add({
         name: `Label ${labelText}`,
         position: Cesium.Cartesian3.fromDegrees(90.2, 7.0, altitude),
@@ -314,12 +334,53 @@ export default function Globe({
     };
   }, [viewMode, volumetricSlices, currentVariableMeta, verticalExaggeration, clearVolumetricEntities]);
 
+  // Handle Left Click for picking Argo floats or Glider tracks
+  const handleLeftClick = useCallback(
+    (event: any) => {
+      const viewer = viewerRef.current;
+      const clickPos = event?.position;
+      if (!viewer || !clickPos) return;
+
+      const pickedObject = viewer.scene.pick(clickPos);
+      if (Cesium.defined(pickedObject) && pickedObject.id) {
+        const entity = pickedObject.id;
+
+        // Check if entity is an Argo Float marker
+        if (entity.name && entity.name.startsWith("Argo Float #") && argoPositions) {
+          const floatId = entity.name.replace("Argo Float #", "").trim();
+          const found = argoPositions.find((f) => f.float_id === floatId);
+          if (found) {
+            onSelectFloat(found);
+            return;
+          }
+        }
+      }
+    },
+    [argoPositions, onSelectFloat]
+  );
+
   // Handle cursor hover over the globe
   const handleMouseMove = useCallback(
     (movement: any) => {
       const viewer = viewerRef.current;
       const endPos = movement?.endPosition || movement?.position;
       if (!viewer || !endPos) return;
+
+      // Check if cursor is over an entity
+      const pickedObject = viewer.scene.pick(endPos);
+      let targetType: string | undefined = undefined;
+      let targetId: string | undefined = undefined;
+
+      if (Cesium.defined(pickedObject) && pickedObject.id) {
+        const ent = pickedObject.id;
+        if (ent.name && ent.name.startsWith("Argo Float #")) {
+          targetType = "Argo Float";
+          targetId = ent.name.replace("Argo Float #", "");
+        } else if (ent.name && ent.name.startsWith("Glider Track")) {
+          targetType = "Glider Mission";
+          targetId = ent.name.replace("Glider Track ", "");
+        }
+      }
 
       const cartesian = viewer.camera.pickEllipsoid(
         endPos,
@@ -370,7 +431,8 @@ export default function Globe({
           value: realValue,
           variableName: currentVariableMeta?.display_name || selectedVariable,
           variableUnits: currentVariableMeta?.units || "",
-          targetType: viewMode === "volumetric" ? "3D Column Stack" : undefined,
+          targetType: targetType || (viewMode === "volumetric" ? "3D Column Stack" : undefined),
+          targetId,
         });
       }
     },
@@ -434,6 +496,10 @@ export default function Globe({
             action={handleMouseMove}
             type={Cesium.ScreenSpaceEventType.MOUSE_MOVE}
           />
+          <ScreenSpaceEvent
+            action={handleLeftClick}
+            type={Cesium.ScreenSpaceEventType.LEFT_CLICK}
+          />
         </ScreenSpaceEventHandler>
 
         {/* Outer EEZ Boundary Outline */}
@@ -449,6 +515,102 @@ export default function Globe({
             outlineWidth={2}
           />
         </Entity>
+
+        {/* Argo Float In-Situ Markers */}
+        {showArgo &&
+          argoPositions?.map((fl) => {
+            const isSelected = selectedFloatId === fl.float_id;
+            return (
+              <Entity
+                key={`argo-${fl.float_id}`}
+                name={`Argo Float #${fl.float_id}`}
+                position={Cesium.Cartesian3.fromDegrees(fl.longitude, fl.latitude, 50)}
+                point={{
+                  pixelSize: isSelected ? 14 : 9,
+                  color: isSelected
+                    ? Cesium.Color.fromCssColorString("#ff007f")
+                    : Cesium.Color.fromCssColorString("#00d2ff"),
+                  outlineColor: isSelected
+                    ? Cesium.Color.WHITE
+                    : Cesium.Color.fromCssColorString("#07192e"),
+                  outlineWidth: isSelected ? 3 : 1.5,
+                  scaleByDistance: new Cesium.NearFarScalar(500000, 1.2, 5000000, 0.7),
+                }}
+                label={{
+                  text: isSelected ? `Float #${fl.float_id}` : "",
+                  font: "11px monospace",
+                  fillColor: Cesium.Color.WHITE,
+                  outlineColor: Cesium.Color.BLACK,
+                  outlineWidth: 2,
+                  style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                  pixelOffset: new Cesium.Cartesian2(0, -16),
+                  horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+                  showBackground: true,
+                  backgroundColor: Cesium.Color.fromCssColorString("#07192e").withAlpha(0.8),
+                }}
+              />
+            );
+          })}
+
+        {/* Ocean Glider Trajectory Polylines */}
+        {showGliders &&
+          gliderTracks?.map((glider) => {
+            const positions = glider.points.map((p) =>
+              Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 100)
+            );
+            const latestPoint = glider.points[glider.points.length - 1];
+
+            return (
+              <React.Fragment key={`glider-group-${glider.glider_id}`}>
+                {/* 1. Track Polyline */}
+                <Entity
+                  name={`Glider Track ${glider.glider_id}`}
+                  polyline={{
+                    positions: positions,
+                    width: 3.5,
+                    material: new Cesium.PolylineGlowMaterialProperty({
+                      glowPower: 0.2,
+                      color: Cesium.Color.fromCssColorString("#f59e0b"),
+                    }),
+                  }}
+                />
+
+                {/* 2. Glider Head Position Marker with badge / tooltip */}
+                {latestPoint && (
+                  <Entity
+                    name={`Glider Track ${glider.glider_id}`}
+                    position={Cesium.Cartesian3.fromDegrees(
+                      latestPoint.lon,
+                      latestPoint.lat,
+                      150
+                    )}
+                    point={{
+                      pixelSize: 11,
+                      color: Cesium.Color.fromCssColorString("#f59e0b"),
+                      outlineColor: Cesium.Color.WHITE,
+                      outlineWidth: 2,
+                    }}
+                    label={{
+                      text: glider.demo_glider_outside_eez
+                        ? `Glider: ${glider.glider_id}\n(demo data — shown outside EEZ)`
+                        : `Glider: ${glider.glider_id}`,
+                      font: "11px monospace",
+                      fillColor: Cesium.Color.fromCssColorString("#fef08a"),
+                      outlineColor: Cesium.Color.BLACK,
+                      outlineWidth: 2,
+                      style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                      pixelOffset: new Cesium.Cartesian2(0, -22),
+                      horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+                      showBackground: true,
+                      backgroundColor: glider.demo_glider_outside_eez
+                        ? Cesium.Color.fromCssColorString("#7f1d1d").withAlpha(0.85)
+                        : Cesium.Color.fromCssColorString("#451a03").withAlpha(0.85),
+                    }}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
       </ResiumViewer>
     </div>
   );

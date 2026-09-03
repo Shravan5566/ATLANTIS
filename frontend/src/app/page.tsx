@@ -2,12 +2,13 @@
 
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getManifest, ManifestResponse } from "@/lib/api";
+import { getManifest, ManifestResponse, ArgoPositionItem } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Colorbar from "@/components/Colorbar";
 import InfoBar, { HoverInfo } from "@/components/InfoBar";
 import GlobeWrapper from "@/components/GlobeWrapper";
+import ArgoProfileDrawer from "@/components/ArgoProfileDrawer";
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -16,6 +17,9 @@ export default function Home() {
   const [timeIndex, setTimeIndex] = useState(0);
   const [showArgo, setShowArgo] = useState(true);
   const [showGliders, setShowGliders] = useState(true);
+
+  // Selected Argo Float for CTD profile side panel
+  const [selectedFloat, setSelectedFloat] = useState<ArgoPositionItem | null>(null);
 
   // Volumetric water column states
   const [viewMode, setViewMode] = useState<"single" | "volumetric">("single");
@@ -53,6 +57,10 @@ export default function Home() {
     heading: number = 0
   ) => {
     setCameraTrigger({ lat, lon, height, pitch, heading, key: Date.now() });
+  };
+
+  const handleSelectFloat = (fl: ArgoPositionItem) => {
+    setSelectedFloat(fl);
   };
 
   return (
@@ -102,11 +110,21 @@ export default function Home() {
           manifest={manifest}
           viewMode={viewMode}
           verticalExaggeration={verticalExaggeration}
+          showArgo={showArgo}
+          showGliders={showGliders}
+          onSelectFloat={handleSelectFloat}
+          selectedFloatId={selectedFloat?.float_id}
           cameraTrigger={cameraTrigger}
         />
       </main>
 
-      {/* 5. Bottom Status and Inspection InfoBar */}
+      {/* 5. Argo Float Depth-Resolved CTD Profile Drawer */}
+      <ArgoProfileDrawer
+        selectedFloat={selectedFloat}
+        onClose={() => setSelectedFloat(null)}
+      />
+
+      {/* 6. Bottom Status and Inspection InfoBar */}
       <InfoBar info={hoverInfo} />
     </div>
   );

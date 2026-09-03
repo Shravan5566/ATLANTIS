@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import React from "react";
 import { HoverInfo } from "./InfoBar";
-import { ManifestResponse } from "@/lib/api";
+import { ManifestResponse, ArgoPositionItem } from "@/lib/api";
 
 const GlobeInternal = dynamic(() => import("./Globe"), {
   ssr: false,
@@ -25,6 +25,10 @@ interface GlobeWrapperProps {
   manifest?: ManifestResponse;
   viewMode: "single" | "volumetric";
   verticalExaggeration: number;
+  showArgo: boolean;
+  showGliders: boolean;
+  onSelectFloat: (float: ArgoPositionItem) => void;
+  selectedFloatId?: string;
   cameraTrigger?: { lat: number; lon: number; height: number; pitch?: number; heading?: number; key: number } | null;
 }
 
