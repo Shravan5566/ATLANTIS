@@ -84,12 +84,9 @@ export default function Home() {
         <GlobeWrapper
           onHoverChange={setHoverInfo}
           selectedVariable={selectedVariable}
-          variableMeta={
-            currentVariableMeta
-              ? { display_name: currentVariableMeta.display_name, units: currentVariableMeta.units }
-              : undefined
-          }
-          currentDepth={currentDepth}
+          depthIndex={depthIndex}
+          timeIndex={timeIndex}
+          manifest={manifest}
           cameraTrigger={cameraTrigger}
         />
       </main>

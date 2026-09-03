@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import React from "react";
 import { HoverInfo } from "./InfoBar";
+import { ManifestResponse } from "@/lib/api";
 
 const GlobeInternal = dynamic(() => import("./Globe"), {
   ssr: false,
@@ -19,11 +20,9 @@ const GlobeInternal = dynamic(() => import("./Globe"), {
 interface GlobeWrapperProps {
   onHoverChange: (info: HoverInfo) => void;
   selectedVariable: string;
-  variableMeta?: {
-    display_name: string;
-    units: string;
-  };
-  currentDepth: number;
+  depthIndex: number;
+  timeIndex: number;
+  manifest?: ManifestResponse;
   cameraTrigger?: { lat: number; lon: number; height: number; key: number } | null;
 }
 
