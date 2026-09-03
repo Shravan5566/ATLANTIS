@@ -35,14 +35,13 @@ EEZ_BBOX = {
     "max_lat": 25.0,
 }
 
-# Default candidate datasets:
-# NRT Analysis/Forecast (near-real-time, covers last 10 days up to present):
-DATASET_NRT = "cmems_mod_glo_phy_anfc_0.083deg_P1D-m"
-# Multiyear Reanalysis (climatological / historic):
+# Copernicus Marine 3D physics datasets (Operational NRT 0.083° daily):
+DATASETS_NRT_3D = {
+    "thetao": "cmems_mod_glo_phy-thetao_anfc_0.083deg_P1D-m",
+    "so": "cmems_mod_glo_phy-so_anfc_0.083deg_P1D-m",
+    "cur": "cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m",
+}
 DATASET_MULTIYEAR = "cmems_mod_glo_phy_my_0.083deg_P1D-m"
-DATASET_LEGACY = "GLOBAL_MULTIYEAR_PHY_001_030"
-
-VARIABLES = ["thetao", "so", "uo", "vo"]
 
 
 def verify_credentials() -> tuple[str, str]:
@@ -80,11 +79,14 @@ def summarize_dataset(file_path: Path):
             print(f"  Coordinates: {list(ds.coords.keys())}")
             print(f"  Variables: {list(ds.data_vars.keys())}")
 
-            if "time" in ds.coords:
-                times = ds["time"].values
+            time_coord = next((c for c in ["time", "valid_time"] if c in ds.coords), None)
+            depth_coord = next((c for c in ["depth", "lev"] if c in ds.coords), None)
+
+            if time_coord:
+                times = ds[time_coord].values
                 print(f"  Time Range: {times[0]} to {times[-1]} ({len(times)} timesteps)")
-            if "depth" in ds.coords:
-                depths = ds["depth"].values
+            if depth_coord:
+                depths = ds[depth_coord].values
                 print(f"  Depth Levels: {len(depths)} levels from {depths[0]:.1f}m to {depths[-1]:.1f}m")
             if "latitude" in ds.coords and "longitude" in ds.coords:
                 print(f"  Latitude: {ds.latitude.values.min():.2f}°N to {ds.latitude.values.max():.2f}°N")
@@ -94,93 +96,117 @@ def summarize_dataset(file_path: Path):
             print(f"  File size on disk: {file_size_mb:.2f} MB")
         print("=" * 70 + "\n")
 
-    except ImportError:
-        print(f"[!] xarray not installed. File saved ({file_path.stat().st_size / 1024:.1f} KB).")
     except Exception as e:
         print(f"[!] Warning reading dataset summary: {e}")
 
 
 def fetch_copernicus_data(
-    dataset_id: str = DATASET_NRT,
-    days: int = 10,
-    min_depth: float = 0.0,
-    max_depth: float = 1000.0,
+    days: int = 5,
+    min_depth: float = 0.5,
+    max_depth: float = 500.0,
+    dataset: str = "nrt",
 ):
-    """Downloads a subset of Copernicus Marine ocean physics data."""
+    """Downloads Copernicus Marine 3D physics data for India's EEZ."""
     username, password = verify_credentials()
 
     try:
         import copernicusmarine
+        import xarray as xr
     except ImportError:
-        print("[-] ERROR: 'copernicusmarine' package is not installed.")
-        print("    Install it via: pip install copernicusmarine")
+        print("[-] ERROR: 'copernicusmarine' or 'xarray' package is not installed.")
         sys.exit(1)
 
     RAW_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Time range: past N days up to yesterday/today
+    # Time range: past N days
     end_dt = datetime.now(timezone.utc)
     start_dt = end_dt - timedelta(days=days)
-    start_str = start_dt.strftime("%Y-%m-%dT%H:%M:%S")
-    end_str = end_dt.strftime("%Y-%m-%dT%H:%M:%S")
+    start_str = start_dt.strftime("%Y-%m-%dT00:00:00")
+    end_str = end_dt.strftime("%Y-%m-%dT00:00:00")
 
-    print("\n" + "-" * 70)
-    print("Initiating Copernicus Marine Subset Download")
-    print(f"Dataset ID:       {dataset_id}")
-    print(f"India EEZ Box:    Lon [{EEZ_BBOX['min_lon']}, {EEZ_BBOX['max_lon']}] | Lat [{EEZ_BBOX['min_lat']}, {EEZ_BBOX['max_lat']}]")
-    print(f"Depth Range:      {min_depth}m to {max_depth}m")
-    print(f"Time Range:       {start_str} -> {end_str} ({days} days)")
-    print(f"Variables:        {', '.join(VARIABLES)}")
-    print(f"Target file:      {OUTPUT_FILE}")
-    print("-" * 70)
+    print("\n" + "=" * 70)
+    print("Initiating Copernicus Marine 3D Physics Subset Download")
+    print(f"India EEZ Box: Lon [{EEZ_BBOX['min_lon']}, {EEZ_BBOX['max_lon']}] | Lat [{EEZ_BBOX['min_lat']}, {EEZ_BBOX['max_lat']}]")
+    print(f"Depth Range:   {min_depth}m to {max_depth}m")
+    print(f"Time Range:    {start_str} -> {end_str} ({days} days)")
+    print(f"Output File:   {OUTPUT_FILE}")
+    print("=" * 70)
 
     try:
-        # Check login / authentication
         print("[*] Authenticating with Copernicus Marine Service...")
-        copernicusmarine.login(
-            username=username,
-            password=password,
-            skip_if_user_already_logged=True,
-        )
+        copernicusmarine.login(username=username, password=password)
 
-        print("[*] Requesting subset from Copernicus Marine API...")
-        # Subset and write to raw/copernicus_eez.nc
-        copernicusmarine.subset(
-            dataset_id=dataset_id,
-            variables=VARIABLES,
-            minimum_longitude=EEZ_BBOX["min_lon"],
-            maximum_longitude=EEZ_BBOX["max_lon"],
-            minimum_latitude=EEZ_BBOX["min_lat"],
-            maximum_latitude=EEZ_BBOX["max_lat"],
-            start_datetime=start_str,
-            end_datetime=end_str,
-            minimum_depth=min_depth,
-            maximum_depth=max_depth,
-            output_filename="copernicus_eez.nc",
-            output_directory=str(RAW_DIR),
-            username=username,
-            password=password,
-            overwrite_output_data=True,
-        )
+        if dataset.lower() == "multiyear":
+            print(f"[*] Downloading multiyear dataset: {DATASET_MULTIYEAR}...")
+            copernicusmarine.subset(
+                dataset_id=DATASET_MULTIYEAR,
+                variables=["thetao", "so", "uo", "vo"],
+                minimum_longitude=EEZ_BBOX["min_lon"],
+                maximum_longitude=EEZ_BBOX["max_lon"],
+                minimum_latitude=EEZ_BBOX["min_lat"],
+                maximum_latitude=EEZ_BBOX["max_lat"],
+                start_datetime=start_str,
+                end_datetime=end_str,
+                minimum_depth=min_depth,
+                maximum_depth=max_depth,
+                output_filename="copernicus_eez.nc",
+                output_directory=str(RAW_DIR),
+                username=username,
+                password=password,
+                overwrite=True,
+            )
+        else:
+            # Download 3D NRT variables and merge
+            temp_files = []
+            queries = [
+                ("thetao", DATASETS_NRT_3D["thetao"], ["thetao"]),
+                ("so", DATASETS_NRT_3D["so"], ["so"]),
+                ("cur", DATASETS_NRT_3D["cur"], ["uo", "vo"]),
+            ]
+
+            for label, ds_id, vars_to_fetch in queries:
+                out_name = f"temp_{label}.nc"
+                print(f"[*] Fetching 3D {label.upper()} ({', '.join(vars_to_fetch)}) from {ds_id}...")
+                copernicusmarine.subset(
+                    dataset_id=ds_id,
+                    variables=vars_to_fetch,
+                    minimum_longitude=EEZ_BBOX["min_lon"],
+                    maximum_longitude=EEZ_BBOX["max_lon"],
+                    minimum_latitude=EEZ_BBOX["min_lat"],
+                    maximum_latitude=EEZ_BBOX["max_lat"],
+                    start_datetime=start_str,
+                    end_datetime=end_str,
+                    minimum_depth=min_depth,
+                    maximum_depth=max_depth,
+                    output_filename=out_name,
+                    output_directory=str(RAW_DIR),
+                    username=username,
+                    password=password,
+                    overwrite=True,
+                )
+                temp_files.append(RAW_DIR / out_name)
+
+            print("[*] Merging downloaded 3D physical fields into unified NetCDF...")
+            datasets = [xr.open_dataset(f) for f in temp_files]
+            merged_ds = xr.merge(datasets)
+            merged_ds.to_netcdf(OUTPUT_FILE)
+
+            # Close and clean temporary files
+            for ds in datasets:
+                ds.close()
+            for f in temp_files:
+                try:
+                    f.unlink()
+                except Exception:
+                    pass
 
         if OUTPUT_FILE.exists() and OUTPUT_FILE.stat().st_size > 0:
             summarize_dataset(OUTPUT_FILE)
         else:
-            print(f"[-] Download finished, but output file was not found at {OUTPUT_FILE}")
+            print(f"[-] Output file was not found at {OUTPUT_FILE}")
 
     except Exception as err:
-        err_msg = str(err)
-        print(f"\n[-] Copernicus Marine error occurred: {err_msg}")
-
-        # Check for common issues and provide clear guidance
-        if "401" in err_msg or "Unauthorized" in err_msg or "credential" in err_msg.lower():
-            print("[!] Authentication failed: Please verify your Copernicus username and password in .env")
-        elif "No data found" in err_msg or "empty" in err_msg.lower() or "coordinates" in err_msg.lower():
-            print(f"[!] No data found for dataset '{dataset_id}' in the requested time range ({start_str} to {end_str}).")
-            if dataset_id == DATASET_NRT:
-                print(f"[!] Tip: Try multiyear dataset '{DATASET_MULTIYEAR}' for historical dates, or check available dates.")
-        else:
-            print("[!] Tip: Verify network connection and dataset availability on data.marine.copernicus.eu")
+        print(f"\n[-] Copernicus Marine error occurred: {err}")
         sys.exit(1)
 
 
