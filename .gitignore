@@ -44,6 +44,7 @@ data-pipeline/raw/*.nc
 data-pipeline/raw/*.nc4
 data-pipeline/raw/*.hdf5
 data-pipeline/raw/*.csv
+data-pipeline/processed/argo_profiles.json
 data-pipeline/processed/tiles/**/*.json.gz
 
 # IDE & OS
