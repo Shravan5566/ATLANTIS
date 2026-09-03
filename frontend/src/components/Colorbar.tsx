@@ -1,62 +1,124 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { ManifestResponse } from "@/lib/api";
+import { Settings, RotateCcw, Palette, Scale, ChevronDown, ChevronUp } from "lucide-react";
+
+export interface ColorbarConfig {
+  palette: string;
+  scaleType: "linear" | "log";
+  min: number;
+  max: number;
+}
 
 interface ColorbarProps {
   manifest?: ManifestResponse;
   selectedVariable: string;
+  config: ColorbarConfig;
+  onChangeConfig: (newConfig: ColorbarConfig) => void;
 }
 
-export default function Colorbar({ manifest, selectedVariable }: ColorbarProps) {
+const AVAILABLE_PALETTES = [
+  { id: "thermal", name: "Thermal", gradient: "from-[#030d40] via-[#00d2ff] via-[#f9d423] to-[#ff2a2a]" },
+  { id: "haline", name: "Haline", gradient: "from-[#001040] via-[#0a9396] via-[#94d2bd] to-[#e9d8a6]" },
+  { id: "coolwarm", name: "Cool-Warm", gradient: "from-[#2166ac] via-[#f7f7f7] to-[#b2182b]" },
+  { id: "viridis", name: "Viridis", gradient: "from-[#440154] via-[#31688e] via-[#35b779] to-[#fde725]" },
+  { id: "plasma", name: "Plasma", gradient: "from-[#0d0887] via-[#9c179e] via-[#ed695d] to-[#f0f921]" },
+];
+
+export default function Colorbar({
+  manifest,
+  selectedVariable,
+  config,
+  onChangeConfig,
+}: ColorbarProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
   const meta = manifest?.variables[selectedVariable] || {
     display_name: selectedVariable,
     units: "",
     palette: "thermal",
     min: 0,
-    max: 100,
+    max: 30,
   };
 
-  // Gradient definitions per palette
-  const getGradientClass = (palette: string) => {
-    switch (palette) {
-      case "thermal":
-        // Navy -> Cyan -> Green -> Yellow -> Red
-        return "bg-gradient-to-r from-[#030d40] via-[#00d2ff] via-[#38ef7d] via-[#f9d423] to-[#ff2a2a]";
-      case "haline":
-        // Deep blue -> Teal -> Cyan -> Mint -> Light Gold
-        return "bg-gradient-to-r from-[#001040] via-[#005f73] via-[#0a9396] via-[#94d2bd] to-[#e9d8a6]";
-      case "coolwarm":
-        // Deep blue -> Light gray -> Vibrant Red
-        return "bg-gradient-to-r from-[#2166ac] via-[#f7f7f7] to-[#b2182b]";
-      case "viridis":
-      default:
-        // Purple -> Teal -> Emerald -> Yellow
-        return "bg-gradient-to-r from-[#440154] via-[#31688e] via-[#35b779] to-[#fde725]";
+  const handleResetDefaults = () => {
+    onChangeConfig({
+      palette: meta.palette || "thermal",
+      scaleType: "linear",
+      min: meta.min,
+      max: meta.max,
+    });
+  };
+
+  const handlePaletteSelect = (pal: string) => {
+    onChangeConfig({ ...config, palette: pal });
+  };
+
+  const handleScaleToggle = (scale: "linear" | "log") => {
+    onChangeConfig({ ...config, scaleType: scale });
+  };
+
+  const handleMinChange = (val: number) => {
+    if (!isNaN(val) && val < config.max) {
+      onChangeConfig({ ...config, min: val });
     }
   };
 
+  const handleMaxChange = (val: number) => {
+    if (!isNaN(val) && val > config.min) {
+      onChangeConfig({ ...config, max: val });
+    }
+  };
+
+  // Find active gradient css class
+  const activePal = AVAILABLE_PALETTES.find((p) => p.id === config.palette) || AVAILABLE_PALETTES[0];
+
+  // Calculate ticks
   const steps = 5;
-  const minVal = meta.min;
-  const maxVal = meta.max;
   const ticks = Array.from({ length: steps }, (_, i) => {
-    const val = minVal + ((maxVal - minVal) / (steps - 1)) * i;
-    return val.toFixed(1);
+    if (config.scaleType === "log") {
+      const range = config.max - config.min;
+      const t = i / (steps - 1);
+      const logVal = config.min + (Math.expm1(t * Math.log1p(range)));
+      return logVal.toFixed(1);
+    } else {
+      const val = config.min + ((config.max - config.min) / (steps - 1)) * i;
+      return val.toFixed(1);
+    }
   });
 
   return (
-    <div className="fixed top-20 right-4 z-30 ocean-glass rounded-xl p-3 border border-cyan-500/20 shadow-xl max-w-xs w-72">
-      <div className="flex items-center justify-between text-xs mb-1.5">
-        <span className="font-semibold text-slate-200">{meta.display_name}</span>
-        <span className="font-mono text-cyan-300 font-bold text-[11px] px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30">
-          {meta.units}
-        </span>
+    <div className="fixed top-20 right-4 z-40 ocean-glass rounded-xl p-3 border border-cyan-500/20 shadow-2xl max-w-xs w-76 sm:w-80 transition-all duration-200">
+      {/* Header */}
+      <div className="flex items-center justify-between text-xs mb-2">
+        <div className="flex items-center gap-1.5 font-semibold text-slate-200">
+          <span>{meta.display_name}</span>
+          <span className="font-mono text-cyan-300 font-bold text-[10px] px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30">
+            {meta.units}
+          </span>
+        </div>
+
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          title="Customize Colorbar Scale & Palette"
+          className={`p-1.5 rounded-lg border transition-all flex items-center gap-1 text-[11px] ${
+            isOpen
+              ? "bg-cyan-500/20 border-cyan-400 text-cyan-300"
+              : "bg-slate-900/60 border-slate-700 text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <Settings className="w-3.5 h-3.5" />
+          {isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        </button>
       </div>
 
-      {/* Color gradient bar */}
-      <div className={`h-3 w-full rounded-md shadow-inner border border-black/30 ${getGradientClass(meta.palette)}`} />
+      {/* Main Gradient Bar */}
+      <div
+        className={`h-3 w-full rounded-md shadow-inner border border-black/40 bg-gradient-to-r ${activePal.gradient}`}
+      />
 
-      {/* Tick values */}
+      {/* Tick Values */}
       <div className="flex justify-between text-[10px] text-slate-300 font-mono mt-1">
         {ticks.map((t, idx) => (
           <span key={idx} className={idx === 0 || idx === ticks.length - 1 ? "font-bold text-cyan-300" : ""}>
@@ -64,6 +126,101 @@ export default function Colorbar({ manifest, selectedVariable }: ColorbarProps) 
           </span>
         ))}
       </div>
+
+      {/* Interactive Editor Drawer (Collapsible) */}
+      {isOpen && (
+        <div className="mt-3 pt-3 border-t border-slate-800/80 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200 text-xs">
+          {/* 1. Palette Selector */}
+          <div>
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+              <Palette className="w-3 h-3 text-cyan-400" />
+              <span>Scientific Color Palette</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {AVAILABLE_PALETTES.map((pal) => (
+                <button
+                  key={pal.id}
+                  onClick={() => handlePaletteSelect(pal.id)}
+                  className={`flex items-center gap-2 p-1.5 rounded-lg border text-[11px] font-medium transition-all ${
+                    config.palette === pal.id
+                      ? "bg-cyan-950/80 border-cyan-400 text-white shadow-sm ring-1 ring-cyan-400/40"
+                      : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <div className={`w-3.5 h-3.5 rounded-full bg-gradient-to-r ${pal.gradient} shrink-0`} />
+                  <span>{pal.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 2. Scale Type: Linear vs Log */}
+          <div>
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+              <Scale className="w-3 h-3 text-teal-400" />
+              <span>Normalization Scale</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                onClick={() => handleScaleToggle("linear")}
+                className={`py-1 px-2 rounded-lg border text-[11px] font-semibold transition-all ${
+                  config.scaleType === "linear"
+                    ? "bg-teal-950/80 border-teal-400 text-white shadow-sm"
+                    : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Linear Scale
+              </button>
+              <button
+                onClick={() => handleScaleToggle("log")}
+                className={`py-1 px-2 rounded-lg border text-[11px] font-semibold transition-all ${
+                  config.scaleType === "log"
+                    ? "bg-teal-950/80 border-teal-400 text-white shadow-sm"
+                    : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Logarithmic (log1p)
+              </button>
+            </div>
+          </div>
+
+          {/* 3. Manual Min & Max Range Inputs */}
+          <div>
+            <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+              <span>Dynamic Range Override</span>
+              <button
+                onClick={handleResetDefaults}
+                className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 font-sans normal-case text-[10px]"
+              >
+                <RotateCcw className="w-2.5 h-2.5" />
+                <span>Reset Defaults</span>
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[9px] text-slate-500 mb-0.5">Min ({meta.units}):</label>
+                <input
+                  type="number"
+                  step={0.5}
+                  value={config.min}
+                  onChange={(e) => handleMinChange(parseFloat(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] text-slate-500 mb-0.5">Max ({meta.units}):</label>
+                <input
+                  type="number"
+                  step={0.5}
+                  value={config.max}
+                  onChange={(e) => handleMaxChange(parseFloat(e.target.value))}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

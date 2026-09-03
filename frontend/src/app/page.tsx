@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getManifest, ManifestResponse, ArgoPositionItem } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
-import Colorbar from "@/components/Colorbar";
+import Colorbar, { ColorbarConfig } from "@/components/Colorbar";
 import InfoBar, { HoverInfo } from "@/components/InfoBar";
 import GlobeWrapper from "@/components/GlobeWrapper";
 import ArgoProfileDrawer from "@/components/ArgoProfileDrawer";
@@ -24,6 +24,9 @@ export default function Home() {
   // Volumetric water column states
   const [viewMode, setViewMode] = useState<"single" | "volumetric">("single");
   const [verticalExaggeration, setVerticalExaggeration] = useState(150);
+
+  // Custom Colorbar Settings per variable
+  const [customColorbar, setCustomColorbar] = useState<Record<string, ColorbarConfig>>({});
 
   const [cameraTrigger, setCameraTrigger] = useState<{
     lat: number;
@@ -48,6 +51,16 @@ export default function Home() {
     queryKey: ["manifest"],
     queryFn: getManifest,
   });
+
+  const currentVariableMeta = manifest?.variables[selectedVariable];
+
+  // Active colorbar settings (custom override or manifest defaults)
+  const activeColorbarConfig: ColorbarConfig = customColorbar[selectedVariable] || {
+    palette: currentVariableMeta?.palette || "thermal",
+    scaleType: "linear",
+    min: currentVariableMeta?.min ?? 0,
+    max: currentVariableMeta?.max ?? 30,
+  };
 
   const handleFlyToRegion = (
     lat: number,
@@ -94,10 +107,14 @@ export default function Home() {
         isLoading={isManifestLoading}
       />
 
-      {/* 3. Top-Right Dynamic Colorbar Legend */}
+      {/* 3. Top-Right Interactive Colorbar Legend & Editor */}
       <Colorbar
         manifest={manifest}
         selectedVariable={selectedVariable}
+        config={activeColorbarConfig}
+        onChangeConfig={(newCfg) =>
+          setCustomColorbar((prev) => ({ ...prev, [selectedVariable]: newCfg }))
+        }
       />
 
       {/* 4. Full-Screen 3D Cesium Globe */}
@@ -114,6 +131,7 @@ export default function Home() {
           showGliders={showGliders}
           onSelectFloat={handleSelectFloat}
           selectedFloatId={selectedFloat?.float_id}
+          colorbarConfig={activeColorbarConfig}
           cameraTrigger={cameraTrigger}
         />
       </main>

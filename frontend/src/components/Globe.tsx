@@ -21,6 +21,7 @@ import {
 } from "@/lib/api";
 import { gridToCanvas } from "@/lib/colors";
 import { HoverInfo } from "./InfoBar";
+import { ColorbarConfig } from "./Colorbar";
 import { Loader2, Layers } from "lucide-react";
 
 // Configure Cesium static base URL in browser
@@ -44,6 +45,7 @@ interface GlobeProps {
   showGliders: boolean;
   onSelectFloat: (float: ArgoPositionItem) => void;
   selectedFloatId?: string;
+  colorbarConfig?: ColorbarConfig;
   cameraTrigger?: { lat: number; lon: number; height: number; pitch?: number; heading?: number; key: number } | null;
 }
 
@@ -72,6 +74,7 @@ export default function Globe({
   showGliders,
   onSelectFloat,
   selectedFloatId,
+  colorbarConfig,
   cameraTrigger,
 }: GlobeProps) {
   const viewerRef = useRef<Cesium.Viewer | null>(null);
@@ -215,11 +218,12 @@ export default function Globe({
 
     if (!tileData || !tileData.values) return;
 
-    const minVal = currentVariableMeta?.min ?? 0;
-    const maxVal = currentVariableMeta?.max ?? 30;
-    const palette = currentVariableMeta?.palette || "thermal";
+    const minVal = colorbarConfig?.min ?? currentVariableMeta?.min ?? 0;
+    const maxVal = colorbarConfig?.max ?? currentVariableMeta?.max ?? 30;
+    const palette = colorbarConfig?.palette ?? currentVariableMeta?.palette ?? "thermal";
+    const scaleType = colorbarConfig?.scaleType ?? "linear";
 
-    const canvas = gridToCanvas(tileData.values, minVal, maxVal, palette, 512, 512);
+    const canvas = gridToCanvas(tileData.values, minVal, maxVal, palette, scaleType, 512, 512);
 
     try {
       const provider = new Cesium.SingleTileImageryProvider({
@@ -268,7 +272,7 @@ export default function Globe({
         cancelAnimationFrame(fadeAnimationRef.current);
       }
     };
-  }, [tileData, currentVariableMeta, viewMode, clearVolumetricEntities]);
+  }, [tileData, currentVariableMeta, viewMode, clearVolumetricEntities, colorbarConfig]);
 
   // Update 3D Volumetric Depth Slices Stack
   useEffect(() => {
@@ -277,9 +281,10 @@ export default function Globe({
 
     clearVolumetricEntities();
 
-    const minVal = currentVariableMeta?.min ?? 0;
-    const maxVal = currentVariableMeta?.max ?? 30;
-    const palette = currentVariableMeta?.palette || "thermal";
+    const minVal = colorbarConfig?.min ?? currentVariableMeta?.min ?? 0;
+    const maxVal = colorbarConfig?.max ?? currentVariableMeta?.max ?? 30;
+    const palette = colorbarConfig?.palette ?? currentVariableMeta?.palette ?? "thermal";
+    const scaleType = colorbarConfig?.scaleType ?? "linear";
 
     const createdEntities: Cesium.Entity[] = [];
 
@@ -289,7 +294,7 @@ export default function Globe({
       const labelText = VOLUMETRIC_LABELS[idx] ?? `${depthMeter}m`;
       const altitude = -(depthMeter * verticalExaggeration);
 
-      const canvas = gridToCanvas(slice.values, minVal, maxVal, palette, 384, 384);
+      const canvas = gridToCanvas(slice.values, minVal, maxVal, palette, scaleType, 384, 384);
       const dataUrl = canvas.toDataURL("image/png");
 
       const sliceEntity = viewer.entities.add({
@@ -332,7 +337,7 @@ export default function Globe({
     return () => {
       clearVolumetricEntities();
     };
-  }, [viewMode, volumetricSlices, currentVariableMeta, verticalExaggeration, clearVolumetricEntities]);
+  }, [viewMode, volumetricSlices, currentVariableMeta, verticalExaggeration, clearVolumetricEntities, colorbarConfig]);
 
   // Handle Left Click for picking Argo floats or Glider tracks
   const handleLeftClick = useCallback(

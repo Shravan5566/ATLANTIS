@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import React from "react";
 import { HoverInfo } from "./InfoBar";
 import { ManifestResponse, ArgoPositionItem } from "@/lib/api";
+import { ColorbarConfig } from "./Colorbar";
 
 const GlobeInternal = dynamic(() => import("./Globe"), {
   ssr: false,
@@ -29,6 +30,7 @@ interface GlobeWrapperProps {
   showGliders: boolean;
   onSelectFloat: (float: ArgoPositionItem) => void;
   selectedFloatId?: string;
+  colorbarConfig?: ColorbarConfig;
   cameraTrigger?: { lat: number; lon: number; height: number; pitch?: number; heading?: number; key: number } | null;
 }
 
