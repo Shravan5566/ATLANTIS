@@ -333,6 +333,12 @@ async def health():
     }
 
 
+@app.get("/health", include_in_schema=False)
+async def health_root_alias():
+    """Alias for hosting platform health checks (Render, etc.)."""
+    return await health()
+
+
 @app.get(
     "/api/manifest",
     response_model=ManifestResponse,
