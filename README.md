@@ -1,3 +1,13 @@
+---
+title: Atlantis Ocean Visualization
+emoji: 🌊
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # SIH26067 — India EEZ Ocean Visualization Platform
 
 Interactive 3D ocean visualization platform rendering INCOIS/Copernicus numerical ocean model outputs (temperature, salinity, currents) together with in-situ observations (Argo floats, gliders) in a single browser environment across India's Exclusive Economic Zone (EEZ: 68°E–90°E, 6°N–25°N).

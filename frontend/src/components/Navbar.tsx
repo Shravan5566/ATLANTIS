@@ -11,8 +11,8 @@ interface NavbarProps {
 
 export default function Navbar({ onToggleSidebar, sidebarOpen }: NavbarProps) {
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 z-50 ocean-glass border-b border-cyan-500/20 px-4 flex items-center justify-between">
-      {/* Left: Brand & Logo */}
+    <header className="fixed top-0 left-0 right-0 h-16 z-50 ocean-glass border-b border-cyan-500/20 px-4 flex items-center justify-between select-none">
+      {/* Left: Official PNG Logo and Wordmark separately */}
       <div className="flex items-center gap-3">
         <button
           onClick={onToggleSidebar}
@@ -22,37 +22,24 @@ export default function Navbar({ onToggleSidebar, sidebarOpen }: NavbarProps) {
           <Waves className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-3">
-          <div className="relative w-10 h-10 rounded-full overflow-hidden border border-cyan-400/40 shadow-lg shadow-cyan-500/20 bg-slate-950 flex items-center justify-center">
+        <div className="flex items-center pl-1">
+          {/* Official Wordmark PNG Only */}
+          <div className="relative flex items-center">
             <Image
-              src="/atlantis-logo.png"
-              alt="ATLANTIS Logo"
-              width={40}
-              height={40}
-              className="object-contain p-0.5"
+              src="/atlantis-wordmark.png"
+              alt="ATLANTIS"
+              width={260}
+              height={22}
+              className="h-5 sm:h-6 w-auto object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] hover:brightness-110 transition-all"
               priority
             />
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-white">
-                ATLANTIS
-              </h1>
-              <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">
-                MoES · INCOIS
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block font-medium">
-              India EEZ Ocean Visualization Platform
-            </p>
           </div>
         </div>
       </div>
 
       {/* Center: Geospatial Coordinates & Scope */}
       <div className="hidden lg:flex items-center gap-4 text-xs">
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full ocean-glass-subtle text-slate-300">
+        <div className="flex items-center gap-2 px-3.5 py-1 rounded-full ocean-glass-subtle text-slate-300">
           <Compass className="w-3.5 h-3.5 text-cyan-400" />
           <span>
             <strong className="text-cyan-300">EEZ Scope:</strong> 6°N–25°N, 68°E–90°E (Arabian Sea & Bay of Bengal)

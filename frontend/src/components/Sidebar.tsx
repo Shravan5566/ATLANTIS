@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { ManifestResponse } from "@/lib/api";
 import VariableSelector from "./VariableSelector";
 import DepthSlider from "./DepthSlider";
@@ -71,8 +72,16 @@ export default function Sidebar({
     >
       {/* Sidebar Header */}
       <div className="p-4 border-b border-cyan-500/20 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-cyan-300 font-bold text-sm tracking-wider uppercase">
-          <Sliders className="w-4 h-4 text-cyan-400" />
+        <div className="flex items-center gap-2.5 text-cyan-300 font-bold text-sm tracking-wider uppercase">
+          <div className="relative w-5 h-5 flex items-center justify-center">
+            <Image
+              src="/atlantis-icon.png"
+              alt="ATLANTIS"
+              width={20}
+              height={18}
+              className="w-4.5 h-auto object-contain drop-shadow-[0_0_8px_rgba(0,210,255,0.6)]"
+            />
+          </div>
           <span>Ocean Controls</span>
         </div>
         <button
@@ -281,8 +290,15 @@ export default function Sidebar({
       </div>
 
       {/* Footer Info */}
-      <div className="p-3 bg-slate-950/70 border-t border-cyan-500/20 text-[10px] text-slate-400 text-center font-mono">
-        INCOIS Numerical Model · 0.083° Grid
+      <div className="p-3 bg-slate-950/70 border-t border-cyan-500/20 text-[10px] text-slate-400 flex items-center justify-center gap-2 font-mono">
+        <Image
+          src="/atlantis-icon.png"
+          alt="ATLANTIS"
+          width={14}
+          height={13}
+          className="w-3.5 h-auto object-contain opacity-60"
+        />
+        <span>INCOIS Numerical Model · 0.083° Grid</span>
       </div>
     </aside>
   );

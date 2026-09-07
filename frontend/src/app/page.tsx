@@ -2,13 +2,14 @@
 
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getManifest, ManifestResponse, ArgoPositionItem } from "@/lib/api";
+import { getManifest, ManifestResponse, ArgoPositionItem, GliderTrackItem } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Colorbar, { ColorbarConfig } from "@/components/Colorbar";
-import InfoBar, { HoverInfo } from "@/components/InfoBar";
+import InfoBar from "@/components/InfoBar";
 import GlobeWrapper from "@/components/GlobeWrapper";
 import ArgoProfileDrawer from "@/components/ArgoProfileDrawer";
+import GliderProfileDrawer from "@/components/GliderProfileDrawer";
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -18,8 +19,9 @@ export default function Home() {
   const [showArgo, setShowArgo] = useState(true);
   const [showGliders, setShowGliders] = useState(true);
 
-  // Selected Argo Float for CTD profile side panel
+  // Selected In-Situ Platforms for profile inspection
   const [selectedFloat, setSelectedFloat] = useState<ArgoPositionItem | null>(null);
+  const [selectedGlider, setSelectedGlider] = useState<GliderTrackItem | null>(null);
 
   // Volumetric water column states
   const [viewMode, setViewMode] = useState<"single" | "volumetric">("single");
@@ -37,14 +39,7 @@ export default function Home() {
     key: number;
   } | null>(null);
 
-  const [hoverInfo, setHoverInfo] = useState<HoverInfo>({
-    latitude: null,
-    longitude: null,
-    depth: 0.5,
-    value: null,
-    variableName: "Sea Water Temperature",
-    variableUnits: "°C",
-  });
+
 
   // Fetch Manifest via React Query
   const { data: manifest, isLoading: isManifestLoading } = useQuery<ManifestResponse>({
@@ -74,6 +69,12 @@ export default function Home() {
 
   const handleSelectFloat = (fl: ArgoPositionItem) => {
     setSelectedFloat(fl);
+    setSelectedGlider(null);
+  };
+
+  const handleSelectGlider = (glider: GliderTrackItem) => {
+    setSelectedGlider(glider);
+    setSelectedFloat(null);
   };
 
   return (
@@ -120,7 +121,6 @@ export default function Home() {
       {/* 4. Full-Screen 3D Cesium Globe */}
       <main className="w-full h-full">
         <GlobeWrapper
-          onHoverChange={setHoverInfo}
           selectedVariable={selectedVariable}
           depthIndex={depthIndex}
           timeIndex={timeIndex}
@@ -131,6 +131,8 @@ export default function Home() {
           showGliders={showGliders}
           onSelectFloat={handleSelectFloat}
           selectedFloatId={selectedFloat?.float_id}
+          onSelectGlider={handleSelectGlider}
+          selectedGliderId={selectedGlider?.glider_id}
           colorbarConfig={activeColorbarConfig}
           cameraTrigger={cameraTrigger}
         />
@@ -142,8 +144,14 @@ export default function Home() {
         onClose={() => setSelectedFloat(null)}
       />
 
-      {/* 6. Bottom Status and Inspection InfoBar */}
-      <InfoBar info={hoverInfo} />
+      {/* 6. Ocean Glider Trajectory and CTD Profile Drawer */}
+      <GliderProfileDrawer
+        selectedGlider={selectedGlider}
+        onClose={() => setSelectedGlider(null)}
+      />
+
+      {/* 7. Bottom Status and Inspection InfoBar (Subscribed directly to hoverStore) */}
+      <InfoBar />
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import React from "react";
 import { HoverInfo } from "./InfoBar";
-import { ManifestResponse, ArgoPositionItem } from "@/lib/api";
+import { ManifestResponse, ArgoPositionItem, GliderTrackItem } from "@/lib/api";
 import { ColorbarConfig } from "./Colorbar";
 
 const GlobeInternal = dynamic(() => import("./Globe"), {
@@ -19,7 +19,7 @@ const GlobeInternal = dynamic(() => import("./Globe"), {
 });
 
 interface GlobeWrapperProps {
-  onHoverChange: (info: HoverInfo) => void;
+  onHoverChange?: (info: HoverInfo) => void;
   selectedVariable: string;
   depthIndex: number;
   timeIndex: number;
@@ -30,6 +30,8 @@ interface GlobeWrapperProps {
   showGliders: boolean;
   onSelectFloat: (float: ArgoPositionItem) => void;
   selectedFloatId?: string;
+  onSelectGlider?: (glider: GliderTrackItem) => void;
+  selectedGliderId?: string;
   colorbarConfig?: ColorbarConfig;
   cameraTrigger?: { lat: number; lon: number; height: number; pitch?: number; heading?: number; key: number } | null;
 }

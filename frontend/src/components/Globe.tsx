@@ -5,7 +5,6 @@ import * as Cesium from "cesium";
 import {
   Viewer as ResiumViewer,
   Entity,
-  RectangleGraphics,
   ScreenSpaceEventHandler,
   ScreenSpaceEvent,
 } from "resium";
@@ -20,7 +19,7 @@ import {
   GliderTrackItem,
 } from "@/lib/api";
 import { gridToCanvas } from "@/lib/colors";
-import { HoverInfo } from "./InfoBar";
+import { hoverStore, HoverInfo } from "@/lib/hoverStore";
 import { ColorbarConfig } from "./Colorbar";
 import { Loader2, Layers } from "lucide-react";
 
@@ -34,7 +33,7 @@ if (typeof window !== "undefined") {
 }
 
 interface GlobeProps {
-  onHoverChange: (info: HoverInfo) => void;
+  onHoverChange?: (info: HoverInfo) => void;
   selectedVariable: string;
   depthIndex: number;
   timeIndex: number;
@@ -45,12 +44,14 @@ interface GlobeProps {
   showGliders: boolean;
   onSelectFloat: (float: ArgoPositionItem) => void;
   selectedFloatId?: string;
+  onSelectGlider?: (glider: GliderTrackItem) => void;
+  selectedGliderId?: string;
   colorbarConfig?: ColorbarConfig;
   cameraTrigger?: { lat: number; lon: number; height: number; pitch?: number; heading?: number; key: number } | null;
 }
 
-// India's EEZ bounding box coordinates (68°–90°E, 6°–25°N)
-const EEZ_RECTANGLE = Cesium.Rectangle.fromDegrees(68.0, 6.0, 90.0, 25.0);
+// Bounding box for Copernicus numerical model tile overlay (68°–90°E, 6°–25°N)
+const MODEL_GRID_RECTANGLE = Cesium.Rectangle.fromDegrees(68.0, 6.0, 90.0, 25.0);
 
 // Canonical depth levels for 3D volumetric water column stack
 const VOLUMETRIC_DEPTH_INDICES = [0, 5, 9, 13]; // 0.5m, 50m, 200m, 1000m
@@ -60,6 +61,28 @@ const VOLUMETRIC_LABELS = [
   "Layer 2: Mixed Base (50m)",
   "Layer 3: Thermocline (200m)",
   "Layer 4: Deep Abyssal (1000m)",
+];
+
+// India's Official EEZ Sector Annotations
+const EEZ_SECTORS = [
+  {
+    name: "Arabian Sea & Lakshadweep EEZ Sector",
+    label: "Arabian Sea & Lakshadweep EEZ\n(Area: ~860,000 km² · 200 NM)",
+    lat: 13.5,
+    lon: 69.8,
+  },
+  {
+    name: "Bay of Bengal EEZ Sector",
+    label: "Bay of Bengal EEZ\n(Area: ~800,000 km² · 200 NM)",
+    lat: 15.0,
+    lon: 86.8,
+  },
+  {
+    name: "Andaman & Nicobar Islands EEZ Sector",
+    label: "Andaman & Nicobar Islands EEZ\n(Area: ~664,448 km² · 200 NM)",
+    lat: 10.5,
+    lon: 93.5,
+  },
 ];
 
 export default function Globe({
@@ -74,6 +97,8 @@ export default function Globe({
   showGliders,
   onSelectFloat,
   selectedFloatId,
+  onSelectGlider,
+  selectedGliderId,
   colorbarConfig,
   cameraTrigger,
 }: GlobeProps) {
@@ -86,6 +111,16 @@ export default function Globe({
 
   // Volumetric entities tracking in Cesium scene
   const volumetricEntitiesRef = useRef<Cesium.Entity[]>([]);
+
+  // Memoized in-memory texture cache to prevent CPU base64 encoding bottlenecks
+  const textureCacheRef = useRef<Map<string, string>>(new Map());
+
+  // Throttling timestamp for mouse move
+  const lastMouseMoveTimeRef = useRef<number>(0);
+
+  // Track GeoJSON Data Sources
+  const eezDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null);
+  const territorialDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -147,27 +182,160 @@ export default function Globe({
   const depthLevels = manifest?.depth_levels || [0.5];
   const currentDepth = depthLevels[depthIndex] ?? 0.5;
 
-  // Initial camera and scene setup
+  // Helper to retrieve or build cached Base64 data URL
+  const getCachedTexture = useCallback(
+    (
+      values: (number | null)[][],
+      minVal: number,
+      maxVal: number,
+      palette: string,
+      scaleType: "linear" | "log",
+      key: string,
+      size: number = 512
+    ): string => {
+      const cached = textureCacheRef.current.get(key);
+      if (cached) return cached;
+
+      const canvas = gridToCanvas(values, minVal, maxVal, palette, scaleType, size, size);
+      const dataUrl = canvas.toDataURL("image/png");
+      textureCacheRef.current.set(key, dataUrl);
+
+      // Keep cache bounded to 64 textures
+      if (textureCacheRef.current.size > 64) {
+        const firstKey = textureCacheRef.current.keys().next().value;
+        if (firstKey) textureCacheRef.current.delete(firstKey);
+      }
+
+      return dataUrl;
+    },
+    []
+  );
+
+  // Initial camera and scene performance configuration
   const handleViewerReady = useCallback((viewer: Cesium.Viewer) => {
     if (!viewer) return;
     viewerRef.current = viewer;
 
+    // Camera initial position centered over India's maritime expanse
     viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(79.0, 15.5, 2600000),
+      destination: Cesium.Cartesian3.fromDegrees(79.0, 15.0, 2700000),
       orientation: {
         heading: Cesium.Math.toRadians(0),
         pitch: Cesium.Math.toRadians(-88),
         roll: 0.0,
       },
-      duration: 2.0,
+      duration: 1.5,
     });
 
-    viewer.scene.globe.enableLighting = true;
+    // 60 FPS Performance Tuning
+    viewer.targetFrameRate = 60;
+    viewer.resolutionScale = 1.0;
+    viewer.scene.globe.maximumScreenSpaceError = 2.0;
+    viewer.scene.globe.tileCacheSize = 120;
+    viewer.scene.globe.enableLighting = false; // Disable heavy dynamic shadow/lighting computations
     viewer.scene.globe.depthTestAgainstTerrain = false;
-    viewer.scene.globe.translucency.enabled = true;
+    viewer.scene.fog.enabled = true;
+    viewer.scene.fog.density = 0.0002;
+    viewer.scene.globe.showGroundAtmosphere = true;
+
+
+    // Translucency only enabled dynamically when in 3D volumetric mode
+    viewer.scene.globe.translucency.enabled = false;
     viewer.scene.globe.translucency.frontFaceAlpha = 0.55;
     viewer.scene.globe.translucency.backFaceAlpha = 0.35;
+
+    // Load Authentic India EEZ GeoJSON (Flanders Marine Institute / VLIZ v12)
+    fetch("/india_eez.geojson")
+      .then((res) => res.json())
+      .then((data) => {
+        // 1. Add authentic EEZ geometry outline (no murky fill)
+        Cesium.GeoJsonDataSource.load(data, {
+          stroke: Cesium.Color.TRANSPARENT,
+          fill: Cesium.Color.TRANSPARENT,
+          clampToGround: true,
+        }).then((ds) => {
+          eezDataSourceRef.current = ds;
+          viewer.dataSources.add(ds);
+        });
+
+        // 2. Add glowing outer boundary polylines for each 200 NM sector ring
+        data.features.forEach((feat: any, fIdx: number) => {
+          const geom = feat.geometry;
+          const processRings = (rings: number[][][]) => {
+            rings.forEach((ring, rIdx) => {
+              const positions = ring.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat, 10));
+              viewer.entities.add({
+                name: `India EEZ 200 NM Limit Ring ${fIdx + 1}-${rIdx + 1}`,
+                polyline: {
+                  positions,
+                  width: 3.5,
+                  clampToGround: true,
+                  material: new Cesium.PolylineGlowMaterialProperty({
+                    glowPower: 0.28,
+                    color: Cesium.Color.fromCssColorString("#00f2a9"),
+                  }),
+                },
+              });
+            });
+          };
+
+          if (geom.type === "Polygon") {
+            processRings([geom.coordinates[0]]);
+          } else if (geom.type === "MultiPolygon") {
+            geom.coordinates.forEach((poly: any) => {
+              processRings([poly[0]]);
+            });
+          }
+        });
+      })
+      .catch((err) => {
+        console.warn("Could not load /india_eez.geojson:", err);
+      });
+
+    // Load Authentic India 12 NM Territorial Sea Limit
+    fetch("/india_12nm.geojson")
+      .then((res) => res.json())
+      .then((data) => {
+        data.features.forEach((feat: any, fIdx: number) => {
+          const geom = feat.geometry;
+          const process12NMRings = (rings: number[][][]) => {
+            rings.forEach((ring, rIdx) => {
+              const positions = ring.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat, 15));
+              viewer.entities.add({
+                name: `India 12 NM Territorial Sea Limit ${fIdx + 1}-${rIdx + 1}`,
+                polyline: {
+                  positions,
+                  width: 2.0,
+                  clampToGround: true,
+                  material: new Cesium.PolylineDashMaterialProperty({
+                    color: Cesium.Color.fromCssColorString("#38bdf8").withAlpha(0.8),
+                    dashLength: 16.0,
+                  }),
+                },
+              });
+            });
+          };
+
+          if (geom.type === "Polygon") {
+            process12NMRings([geom.coordinates[0]]);
+          } else if (geom.type === "MultiPolygon") {
+            geom.coordinates.forEach((poly: any) => {
+              process12NMRings([poly[0]]);
+            });
+          }
+        });
+      })
+      .catch((err) => {
+        console.warn("Could not load /india_12nm.geojson:", err);
+      });
   }, []);
+
+  // Dynamically toggle globe translucency for volumetric mode
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    viewer.scene.globe.translucency.enabled = viewMode === "volumetric";
+  }, [viewMode]);
 
   // Handle external camera triggers
   useEffect(() => {
@@ -183,7 +351,7 @@ export default function Globe({
           pitch: Cesium.Math.toRadians(cameraTrigger.pitch ?? -85),
           roll: 0.0,
         },
-        duration: 1.8,
+        duration: 1.5,
       });
     }
   }, [cameraTrigger]);
@@ -198,7 +366,7 @@ export default function Globe({
     volumetricEntitiesRef.current = [];
   }, []);
 
-  // Update 2D Single Layer
+  // Update 2D Single Layer with memoized texture cache
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
@@ -218,17 +386,43 @@ export default function Globe({
 
     if (!tileData || !tileData.values) return;
 
-    const minVal = colorbarConfig?.min ?? currentVariableMeta?.min ?? 0;
-    const maxVal = colorbarConfig?.max ?? currentVariableMeta?.max ?? 30;
+    // Calculate actual active slice range for high-contrast, uniform scientific gradient
+    let sliceMin = Infinity;
+    let sliceMax = -Infinity;
+    for (let r = 0; r < tileData.values.length; r++) {
+      const row = tileData.values[r];
+      if (!row) continue;
+      for (let c = 0; c < row.length; c++) {
+        const v = row[c];
+        if (v !== null && !isNaN(v)) {
+          if (v < sliceMin) sliceMin = v;
+          if (v > sliceMax) sliceMax = v;
+        }
+      }
+    }
+    const hasSliceRange = sliceMin !== Infinity && sliceMax !== -Infinity && sliceMax > sliceMin;
+    const minVal = colorbarConfig?.min ?? (hasSliceRange ? sliceMin : currentVariableMeta?.min ?? 0);
+    const maxVal = colorbarConfig?.max ?? (hasSliceRange ? sliceMax : currentVariableMeta?.max ?? 30);
     const palette = colorbarConfig?.palette ?? currentVariableMeta?.palette ?? "thermal";
     const scaleType = colorbarConfig?.scaleType ?? "linear";
 
-    const canvas = gridToCanvas(tileData.values, minVal, maxVal, palette, scaleType, 512, 512);
+    const cacheKey = `${selectedVariable}_${timeIndex}_${depthIndex}_${minVal}_${maxVal}_${palette}_${scaleType}`;
+    const dataUrl = getCachedTexture(
+      tileData.values,
+      minVal,
+      maxVal,
+      palette,
+      scaleType,
+      cacheKey,
+      512
+    );
 
     try {
       const provider = new Cesium.SingleTileImageryProvider({
-        url: canvas.toDataURL("image/png"),
-        rectangle: EEZ_RECTANGLE,
+        url: dataUrl,
+        rectangle: MODEL_GRID_RECTANGLE,
+        tileWidth: 512,
+        tileHeight: 512,
       });
 
       const newLayer = viewer.imageryLayers.addImageryProvider(provider);
@@ -236,7 +430,7 @@ export default function Globe({
 
       const oldLayer = activeLayerRef.current;
       const startTime = performance.now();
-      const fadeDuration = 350;
+      const fadeDuration = 250;
 
       if (fadeAnimationRef.current) {
         cancelAnimationFrame(fadeAnimationRef.current);
@@ -246,10 +440,10 @@ export default function Globe({
         const elapsed = now - startTime;
         const progress = Math.min(1.0, elapsed / fadeDuration);
         const t = 0.5 - 0.5 * Math.cos(progress * Math.PI);
-        newLayer.alpha = t * 0.85;
+        newLayer.alpha = t * 0.62;
 
         if (oldLayer && viewer.imageryLayers.contains(oldLayer)) {
-          oldLayer.alpha = (1.0 - t) * 0.85;
+          oldLayer.alpha = (1.0 - t) * 0.62;
         }
 
         if (progress < 1.0) {
@@ -272,9 +466,19 @@ export default function Globe({
         cancelAnimationFrame(fadeAnimationRef.current);
       }
     };
-  }, [tileData, currentVariableMeta, viewMode, clearVolumetricEntities, colorbarConfig]);
+  }, [
+    tileData,
+    currentVariableMeta,
+    viewMode,
+    clearVolumetricEntities,
+    colorbarConfig,
+    getCachedTexture,
+    selectedVariable,
+    timeIndex,
+    depthIndex,
+  ]);
 
-  // Update 3D Volumetric Depth Slices Stack
+  // Update 3D Volumetric Depth Slices Stack with memoized textures
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewMode !== "volumetric" || volumetricSlices.length === 0) return;
@@ -294,13 +498,21 @@ export default function Globe({
       const labelText = VOLUMETRIC_LABELS[idx] ?? `${depthMeter}m`;
       const altitude = -(depthMeter * verticalExaggeration);
 
-      const canvas = gridToCanvas(slice.values, minVal, maxVal, palette, scaleType, 384, 384);
-      const dataUrl = canvas.toDataURL("image/png");
+      const cacheKey = `vol_${selectedVariable}_${timeIndex}_${idx}_${minVal}_${maxVal}_${palette}_${scaleType}`;
+      const dataUrl = getCachedTexture(
+        slice.values,
+        minVal,
+        maxVal,
+        palette,
+        scaleType,
+        cacheKey,
+        384
+      );
 
       const sliceEntity = viewer.entities.add({
         name: `Volumetric Slice ${labelText}`,
         rectangle: {
-          coordinates: EEZ_RECTANGLE,
+          coordinates: MODEL_GRID_RECTANGLE,
           height: altitude,
           material: new Cesium.ImageMaterialProperty({
             image: dataUrl,
@@ -337,9 +549,19 @@ export default function Globe({
     return () => {
       clearVolumetricEntities();
     };
-  }, [viewMode, volumetricSlices, currentVariableMeta, verticalExaggeration, clearVolumetricEntities, colorbarConfig]);
+  }, [
+    viewMode,
+    volumetricSlices,
+    currentVariableMeta,
+    verticalExaggeration,
+    clearVolumetricEntities,
+    colorbarConfig,
+    getCachedTexture,
+    selectedVariable,
+    timeIndex,
+  ]);
 
-  // Handle Left Click for picking Argo floats or Glider tracks
+  // Handle Left Click: Pick Argo float markers and Glider trajectories
   const handleLeftClick = useCallback(
     (event: any) => {
       const viewer = viewerRef.current;
@@ -350,43 +572,62 @@ export default function Globe({
       if (Cesium.defined(pickedObject) && pickedObject.id) {
         const entity = pickedObject.id;
 
-        // Check if entity is an Argo Float marker
+        // 1. Check if entity is an Argo Float marker
         if (entity.name && entity.name.startsWith("Argo Float #") && argoPositions) {
           const floatId = entity.name.replace("Argo Float #", "").trim();
-          const found = argoPositions.find((f) => f.float_id === floatId);
+          const found = argoPositions.find((f) => String(f.float_id) === String(floatId));
           if (found) {
             onSelectFloat(found);
             return;
           }
         }
+
+        // 2. Check if entity is a Glider Track or Glider Head marker
+        if (entity.name && entity.name.startsWith("Glider Track ") && gliderTracks && onSelectGlider) {
+          const gliderId = entity.name.replace("Glider Track ", "").trim();
+          const found = gliderTracks.find((g) => String(g.glider_id) === String(gliderId));
+          if (found) {
+            onSelectGlider(found);
+            return;
+          }
+        }
       }
     },
-    [argoPositions, onSelectFloat]
+    [argoPositions, gliderTracks, onSelectFloat, onSelectGlider]
   );
 
-  // Handle cursor hover over the globe
+  // Ultra-Smooth 60 FPS Throttled Mouse Hover Handler
   const handleMouseMove = useCallback(
     (movement: any) => {
       const viewer = viewerRef.current;
       const endPos = movement?.endPosition || movement?.position;
       if (!viewer || !endPos) return;
 
-      // Check if cursor is over an entity
-      const pickedObject = viewer.scene.pick(endPos);
-      let targetType: string | undefined = undefined;
-      let targetId: string | undefined = undefined;
+      // Throttle to max 22Hz (45ms gate) to keep render thread 100% fluid at 60 FPS
+      const now = performance.now();
+      if (now - lastMouseMoveTimeRef.current < 45) return;
+      lastMouseMoveTimeRef.current = now;
 
-      if (Cesium.defined(pickedObject) && pickedObject.id) {
-        const ent = pickedObject.id;
-        if (ent.name && ent.name.startsWith("Argo Float #")) {
-          targetType = "Argo Float";
-          targetId = ent.name.replace("Argo Float #", "");
-        } else if (ent.name && ent.name.startsWith("Glider Track")) {
-          targetType = "Glider Mission";
-          targetId = ent.name.replace("Glider Track ", "");
+      // Check if cursor hovers over an in-situ probe (Argo Float or Glider)
+      let inSituTargetType: string | undefined = undefined;
+      let inSituTargetId: string | undefined = undefined;
+      try {
+        const picked = viewer.scene.pick(endPos);
+        if (Cesium.defined(picked) && picked.id?.name) {
+          const eName = picked.id.name;
+          if (eName.startsWith("Argo Float #")) {
+            inSituTargetType = "Argo Float";
+            inSituTargetId = eName.replace("Argo Float #", "").trim();
+          } else if (eName.startsWith("Glider Track ")) {
+            inSituTargetType = "Ocean Glider";
+            inSituTargetId = eName.replace("Glider Track ", "").trim();
+          }
         }
+      } catch (err) {
+        // Pass through smoothly
       }
 
+      // Pure CPU Ellipsoid ray cast — instant and zero GPU stall
       const cartesian = viewer.camera.pickEllipsoid(
         endPos,
         viewer.scene.globe.ellipsoid
@@ -412,14 +653,22 @@ export default function Globe({
             0,
             Math.min(
               activeLatGrid.length - 1,
-              Math.round(((lat - activeLatGrid[0]) / (activeLatGrid[activeLatGrid.length - 1] - activeLatGrid[0])) * (activeLatGrid.length - 1))
+              Math.round(
+                ((lat - activeLatGrid[0]) /
+                  (activeLatGrid[activeLatGrid.length - 1] - activeLatGrid[0])) *
+                  (activeLatGrid.length - 1)
+              )
             )
           );
           const lonIdx = Math.max(
             0,
             Math.min(
               activeLonGrid.length - 1,
-              Math.round(((lon - activeLonGrid[0]) / (activeLonGrid[activeLonGrid.length - 1] - activeLonGrid[0])) * (activeLonGrid.length - 1))
+              Math.round(
+                ((lon - activeLonGrid[0]) /
+                  (activeLonGrid[activeLonGrid.length - 1] - activeLonGrid[0])) *
+                  (activeLonGrid.length - 1)
+              )
             )
           );
 
@@ -429,19 +678,33 @@ export default function Globe({
           }
         }
 
-        onHoverChange({
+        const info: HoverInfo = {
           latitude: lat,
           longitude: lon,
           depth: inEEZ ? (viewMode === "volumetric" ? 0.5 : currentDepth) : null,
           value: realValue,
           variableName: currentVariableMeta?.display_name || selectedVariable,
           variableUnits: currentVariableMeta?.units || "",
-          targetType: targetType || (viewMode === "volumetric" ? "3D Column Stack" : undefined),
-          targetId,
-        });
+          targetType: inSituTargetType || (viewMode === "volumetric" ? "3D Column Stack" : undefined),
+          targetId: inSituTargetId,
+        };
+
+        // Write directly to decoupled hoverStore — InfoBar updates without parent re-renders!
+        hoverStore.set(info);
+        if (onHoverChange) {
+          onHoverChange(info);
+        }
       }
     },
-    [currentDepth, currentVariableMeta, onHoverChange, selectedVariable, tileData, viewMode, volumetricSlices]
+    [
+      currentDepth,
+      currentVariableMeta,
+      onHoverChange,
+      selectedVariable,
+      tileData,
+      viewMode,
+      volumetricSlices,
+    ]
   );
 
   if (!isMounted) {
@@ -507,20 +770,6 @@ export default function Globe({
           />
         </ScreenSpaceEventHandler>
 
-        {/* Outer EEZ Boundary Outline */}
-        <Entity
-          name="India EEZ Outer Perimeter"
-          description="India Exclusive Economic Zone Boundary (68°–90°E, 6°–25°N)"
-        >
-          <RectangleGraphics
-            coordinates={EEZ_RECTANGLE}
-            material={Cesium.Color.TRANSPARENT}
-            outline={true}
-            outlineColor={Cesium.Color.fromCssColorString("#00f2a9").withAlpha(0.6)}
-            outlineWidth={2}
-          />
-        </Entity>
-
         {/* Argo Float In-Situ Markers */}
         {showArgo &&
           argoPositions?.map((fl) => {
@@ -564,6 +813,7 @@ export default function Globe({
               Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 100)
             );
             const latestPoint = glider.points[glider.points.length - 1];
+            const isGliderSelected = selectedGliderId === glider.glider_id;
 
             return (
               <React.Fragment key={`glider-group-${glider.glider_id}`}>
@@ -572,15 +822,17 @@ export default function Globe({
                   name={`Glider Track ${glider.glider_id}`}
                   polyline={{
                     positions: positions,
-                    width: 3.5,
+                    width: isGliderSelected ? 6.0 : 3.5,
                     material: new Cesium.PolylineGlowMaterialProperty({
-                      glowPower: 0.2,
-                      color: Cesium.Color.fromCssColorString("#f59e0b"),
+                      glowPower: isGliderSelected ? 0.45 : 0.2,
+                      color: isGliderSelected
+                        ? Cesium.Color.fromCssColorString("#fbbf24")
+                        : Cesium.Color.fromCssColorString("#f59e0b"),
                     }),
                   }}
                 />
 
-                {/* 2. Glider Head Position Marker with badge / tooltip */}
+                {/* 2. Glider Head Position Marker */}
                 {latestPoint && (
                   <Entity
                     name={`Glider Track ${glider.glider_id}`}
@@ -590,27 +842,29 @@ export default function Globe({
                       150
                     )}
                     point={{
-                      pixelSize: 11,
-                      color: Cesium.Color.fromCssColorString("#f59e0b"),
+                      pixelSize: isGliderSelected ? 16 : 11,
+                      color: isGliderSelected
+                        ? Cesium.Color.fromCssColorString("#f59e0b")
+                        : Cesium.Color.fromCssColorString("#d97706"),
                       outlineColor: Cesium.Color.WHITE,
-                      outlineWidth: 2,
+                      outlineWidth: isGliderSelected ? 3 : 2,
                     }}
-                    label={{
-                      text: glider.demo_glider_outside_eez
-                        ? `Glider: ${glider.glider_id}\n(demo data — shown outside EEZ)`
-                        : `Glider: ${glider.glider_id}`,
-                      font: "11px monospace",
-                      fillColor: Cesium.Color.fromCssColorString("#fef08a"),
-                      outlineColor: Cesium.Color.BLACK,
-                      outlineWidth: 2,
-                      style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                      pixelOffset: new Cesium.Cartesian2(0, -22),
-                      horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-                      showBackground: true,
-                      backgroundColor: glider.demo_glider_outside_eez
-                        ? Cesium.Color.fromCssColorString("#7f1d1d").withAlpha(0.85)
-                        : Cesium.Color.fromCssColorString("#451a03").withAlpha(0.85),
-                    }}
+                    label={
+                      isGliderSelected
+                        ? {
+                            text: `Glider: ${glider.glider_id}`,
+                            font: "11px monospace",
+                            fillColor: Cesium.Color.fromCssColorString("#fef08a"),
+                            outlineColor: Cesium.Color.BLACK,
+                            outlineWidth: 2,
+                            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                            pixelOffset: new Cesium.Cartesian2(0, -20),
+                            horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+                            showBackground: true,
+                            backgroundColor: Cesium.Color.fromCssColorString("#451a03").withAlpha(0.85),
+                          }
+                        : undefined
+                    }
                   />
                 )}
               </React.Fragment>

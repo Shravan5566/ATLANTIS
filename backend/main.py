@@ -23,8 +23,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, Field
 
@@ -182,6 +183,24 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
 
+# Performance & 60 FPS Asset Caching Middleware
+@app.middleware("http")
+async def add_performance_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if (
+        path.startswith("/cesium/")
+        or path.startswith("/_next/")
+        or path.endswith((".geojson", ".png", ".svg", ".ico", ".js", ".css", ".wasm", ".woff2"))
+    ):
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif path.startswith("/api/field"):
+        response.headers["Cache-Control"] = "public, max-age=600"
+    elif path.startswith("/api/manifest"):
+        response.headers["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
 # ---------------------------------------------------------------------------
 # Helper Caching Functions
 # ---------------------------------------------------------------------------
@@ -273,8 +292,8 @@ def load_field_tile_bytes(variable: str, time_index: int, depth_index: int) -> b
 # API Endpoints
 # ---------------------------------------------------------------------------
 
-@app.get("/", tags=["Root"])
-async def root():
+@app.get("/api", tags=["Root"])
+async def api_root():
     """Root metadata and navigation links."""
     return {
         "project": "SIH26067 – India EEZ Ocean Visualization Platform",
@@ -401,6 +420,17 @@ async def get_argo_profile(float_id: str):
 )
 async def get_glider_tracks():
     return load_glider_tracks()
+
+
+# ---------------------------------------------------------------------------
+# Frontend Static Mount (All-in-One Unified Production Mode)
+# ---------------------------------------------------------------------------
+FRONTEND_STATIC_DIR = PROJECT_ROOT / "frontend" / "out"
+if not FRONTEND_STATIC_DIR.exists():
+    FRONTEND_STATIC_DIR = BACKEND_DIR / "static"
+
+if FRONTEND_STATIC_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(FRONTEND_STATIC_DIR), html=True), name="frontend")
 
 
 if __name__ == "__main__":

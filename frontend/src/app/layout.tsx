@@ -7,8 +7,8 @@ export const metadata: Metadata = {
   description:
     "Interactive 3D ocean visualization platform rendering INCOIS/Copernicus numerical model outputs together with real in-situ Argo floats and gliders across India's EEZ.",
   icons: {
-    icon: "/atlantis-logo.png",
-    apple: "/atlantis-logo.png",
+    icon: "/atlantis-icon.png",
+    apple: "/atlantis-icon.png",
   },
 };
 
@@ -20,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark h-full">
       <head>
-        <link rel="icon" href="/atlantis-logo.png" />
+        <link rel="icon" href="/atlantis-icon.png" />
       </head>
       <body className="h-full bg-slate-950 text-slate-100 overflow-hidden">
         <Providers>{children}</Providers>
