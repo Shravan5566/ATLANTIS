@@ -4,18 +4,16 @@
  */
 
 export function getApiBase(): string {
-  if (
-    process.env.NEXT_PUBLIC_API_URL &&
-    process.env.NEXT_PUBLIC_API_URL.trim() !== ""
-  ) {
-    return process.env.NEXT_PUBLIC_API_URL.trim();
-  }
   if (typeof window !== "undefined") {
-    // Only in local Next.js dev server mode
+    // In production (HTTPS on Render or custom domain), always use same-origin relative URLs
+    // to prevent browser Mixed Content (HTTP/HTTPS) blocking
+    if (window.location.protocol === "https:") {
+      return "";
+    }
+    // Only in local Next.js dev server mode on port 3000
     if (window.location.hostname === "localhost" && window.location.port === "3000") {
       return "http://localhost:8000";
     }
-    // In production (Render, custom domain, etc.) use same-origin relative URLs
     return "";
   }
   return "";
