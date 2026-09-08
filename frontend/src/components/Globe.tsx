@@ -369,7 +369,7 @@ export default function Globe({
   // Update 2D Single Layer with memoized texture cache
   useEffect(() => {
     const viewer = viewerRef.current;
-    if (!viewer) return;
+    if (!viewer || viewer.isDestroyed?.() || !viewer.imageryLayers) return;
 
     if (viewMode === "volumetric") {
       if (activeLayerRef.current && viewer.imageryLayers.contains(activeLayerRef.current)) {

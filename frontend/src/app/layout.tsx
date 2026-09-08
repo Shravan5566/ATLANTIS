@@ -21,6 +21,12 @@ export default function RootLayout({
     <html lang="en" className="dark h-full">
       <head>
         <link rel="icon" href="/atlantis-icon.png" />
+        <link rel="stylesheet" href="/cesium/Widgets/widgets.css" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.CESIUM_BASE_URL = "/cesium";`,
+          }}
+        />
       </head>
       <body className="h-full bg-slate-950 text-slate-100 overflow-hidden">
         <Providers>{children}</Providers>
