@@ -26,7 +26,6 @@ wheels/
 # Node / Frontend
 frontend/node_modules/
 frontend/.next/
-frontend/out/
 frontend/build/
 frontend/public/cesium/
 .npm
