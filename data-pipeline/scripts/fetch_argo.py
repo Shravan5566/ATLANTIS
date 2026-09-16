@@ -207,6 +207,30 @@ def process_argo_dataframe(df):
     # Keep rows that have at least temperature or salinity
     clean_df = clean_df[clean_df["temperature"].notna() | clean_df["salinity"].notna()]
 
+    # Physical plausibility range filters — drop rows that are clearly fill-value artifacts
+    # These values (e.g., 9.969e+36) sometimes survive NaN conversion in older Argo files.
+    n_before = len(clean_df)
+    if "temperature" in clean_df.columns:
+        bad_temp = clean_df["temperature"].notna() & (
+            (clean_df["temperature"] < -5.0) | (clean_df["temperature"] > 40.0)
+        )
+        clean_df.loc[bad_temp, "temperature"] = float("nan")
+    if "salinity" in clean_df.columns:
+        bad_sal = clean_df["salinity"].notna() & (
+            (clean_df["salinity"] < 0.0) | (clean_df["salinity"] > 45.0)
+        )
+        clean_df.loc[bad_sal, "salinity"] = float("nan")
+    if "depth" in clean_df.columns:
+        bad_depth = clean_df["depth"].notna() & (
+            (clean_df["depth"] < 0.0) | (clean_df["depth"] > 12000.0)
+        )
+        clean_df = clean_df[~bad_depth]
+    # Drop rows that now have neither temperature nor salinity after masking
+    clean_df = clean_df[clean_df["temperature"].notna() | clean_df["salinity"].notna()]
+    n_after = len(clean_df)
+    if n_before > n_after:
+        print(f"  [!] Physical range filter removed {n_before - n_after} implausible rows from Argo data.")
+
     # Sort
     clean_df = clean_df.sort_values(by=["float_id", "timestamp", "depth"]).reset_index(drop=True)
 

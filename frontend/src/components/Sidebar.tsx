@@ -16,6 +16,7 @@ import {
   Box,
   Layers as LayersIcon,
   Maximize2,
+  Compass,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -37,6 +38,7 @@ interface SidebarProps {
   onExaggerationChange: (val: number) => void;
   isOpen: boolean;
   onClose: () => void;
+  onToggle?: () => void;
   isLoading?: boolean;
 }
 
@@ -59,6 +61,7 @@ export default function Sidebar({
   onExaggerationChange,
   isOpen,
   onClose,
+  onToggle,
   isLoading,
 }: SidebarProps) {
   const depthLevels = manifest?.depth_levels || [0.5, 5, 10, 20, 50, 100, 200, 500, 1000];
@@ -66,10 +69,35 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`fixed top-16 left-0 bottom-10 w-80 sm:w-88 z-40 ocean-glass border-r border-cyan-500/20 flex flex-col transition-transform duration-300 ease-in-out ${
-        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      className={`fixed top-16 left-0 bottom-10 w-80 z-40 ocean-glass border-r border-cyan-500/20 flex flex-col transition-transform duration-300 ease-in-out ${
+        isOpen ? "translate-x-0" : "-translate-x-full"
       }`}
     >
+      {/* Edge Slide Toggle Handle — Attached directly so it slides seamlessly in 100% sync */}
+      <button
+        onClick={onToggle || onClose}
+        title={isOpen ? "Hide Ocean Controls" : "Show Ocean Controls"}
+        aria-label="Toggle Ocean Controls Sidebar"
+        className="absolute left-full top-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-1
+          w-5 h-20 rounded-r-xl
+          ocean-glass border border-l-0 border-cyan-500/30
+          text-cyan-400 hover:text-white hover:bg-cyan-950/80
+          shadow-lg shadow-cyan-950/40 cursor-pointer transition-colors duration-200"
+      >
+        <svg
+          className={`w-3 h-3 transition-transform duration-300 ${isOpen ? "" : "rotate-180"}`}
+          fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+        <span
+          className="text-[9px] font-bold tracking-widest uppercase opacity-70"
+          style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
+        >
+          {isOpen ? "Hide" : "Controls"}
+        </span>
+      </button>
+
       {/* Sidebar Header */}
       <div className="p-4 border-b border-cyan-500/20 flex items-center justify-between">
         <div className="flex items-center gap-2.5 text-cyan-300 font-bold text-sm tracking-wider uppercase">
@@ -127,8 +155,8 @@ export default function Sidebar({
             <button
               onClick={() => {
                 onViewModeChange("volumetric");
-                // Automatically tilt camera to showcase the 3D stack
-                onFlyToRegion(15.0, 78.0, 3200000, -45, 10);
+                // Center camera on the 3D ocean water column with an isometric perspective tilt
+                onFlyToRegion(1.5, 74.0, 2600000, -40, 18);
               }}
               className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-semibold transition-all border ${
                 viewMode === "volumetric"
@@ -165,13 +193,24 @@ export default function Sidebar({
                 <span>400x</span>
               </div>
 
-              <button
-                onClick={() => onFlyToRegion(14.5, 78.5, 3000000, -38, 15)}
-                className="w-full mt-1 py-1.5 px-2 rounded-lg bg-teal-950/70 hover:bg-teal-900/90 border border-teal-500/40 text-[11px] text-teal-300 flex items-center justify-center gap-1.5 transition-all"
-              >
-                <Maximize2 className="w-3 h-3" />
-                <span>Perspective 3D Water Column Tilt</span>
-              </button>
+              <div className="grid grid-cols-2 gap-1.5 pt-1">
+                <button
+                  onClick={() => onFlyToRegion(1.5, 74.0, 2600000, -40, 18)}
+                  className="py-1.5 px-2 rounded-lg bg-teal-950/70 hover:bg-teal-900/90 border border-teal-500/40 text-[11px] text-teal-300 flex items-center justify-center gap-1.5 transition-all"
+                  title="3D Oblique Perspective Angle"
+                >
+                  <Maximize2 className="w-3 h-3" />
+                  <span>3D Oblique</span>
+                </button>
+                <button
+                  onClick={() => onFlyToRegion(12.0, 57.0, 2200000, -28, 76)}
+                  className="py-1.5 px-2 rounded-lg bg-cyan-950/70 hover:bg-cyan-900/90 border border-cyan-500/40 text-[11px] text-cyan-300 flex items-center justify-center gap-1.5 transition-all"
+                  title="3D Side Profile Horizon Angle"
+                >
+                  <Compass className="w-3 h-3" />
+                  <span>Side Profile</span>
+                </button>
+              </div>
             </div>
           ) : (
             /* If Single Mode: Show standard Depth Slider */

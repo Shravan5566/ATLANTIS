@@ -1,0 +1,19 @@
+﻿title = "ATLANTIS Gitleaks Config"
+
+[allowlist]
+  description = "Allowlisted patterns that are intentionally public or placeholder values"
+  regexes = [
+    # Cesium Ion token is a client-side public key by design (scoped in Cesium Ion dashboard)
+    '''NEXT_PUBLIC_CESIUM_ION_TOKEN''',
+    # .env.example placeholder values are safe by design
+    '''your_copernicus_username_here''',
+    '''your_copernicus_password_here''',
+    '''your_cesium_ion_token_here''',
+  ]
+  paths = [
+    # Example files contain placeholder values only, never real secrets
+    '''backend/.env.example''',
+    '''frontend/.env.local.example''',
+    # Compiled static output — not source of truth
+    '''frontend/out/''',
+  ]

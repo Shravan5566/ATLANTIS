@@ -1,5 +1,8 @@
 /**
- * lib/colors.ts - Scientific color palette definitions, log/linear normalization, and canvas rasterization
+ * lib/colors.ts - Scientific oceanographic color palettes, normalization, and canvas rasterization.
+ *
+ * Generates smooth, publication-quality sea-surface temperature and ocean field heatmaps
+ * using bilinear interpolation, natural coastline blending, and edge feathering.
  */
 
 export interface ColorStop {
@@ -10,41 +13,57 @@ export interface ColorStop {
 }
 
 export const PALETTES: Record<string, ColorStop[]> = {
-  // Thermal: Deep Navy -> Cyan -> Green -> Yellow -> Red
+  // Thermal: Satellite Sea Surface Temperature standard (NOAA / Copernicus SST)
+  // Deep oceanic blue -> Azure -> Sky cyan -> Emerald sea green -> Lime -> Gold -> Amber -> Coral red -> Ruby
   thermal: [
-    { pos: 0.0, r: 3, g: 13, b: 64 },
-    { pos: 0.25, r: 0, g: 210, b: 255 },
-    { pos: 0.5, r: 56, g: 239, b: 125 },
-    { pos: 0.75, r: 249, g: 212, b: 35 },
-    { pos: 1.0, r: 255, g: 42, b: 42 },
+    { pos: 0.0, r: 10, g: 28, b: 84 },
+    { pos: 0.12, r: 0, g: 85, b: 180 },
+    { pos: 0.25, r: 0, g: 170, b: 225 },
+    { pos: 0.38, r: 16, g: 185, b: 129 },
+    { pos: 0.50, r: 132, g: 204, b: 22 },
+    { pos: 0.65, r: 250, g: 204, b: 21 },
+    { pos: 0.78, r: 249, g: 115, b: 22 },
+    { pos: 0.90, r: 239, g: 68, b: 68 },
+    { pos: 1.0, r: 190, g: 18, b: 60 },
   ],
-  // Haline: Deep Blue -> Teal -> Cyan -> Mint -> Light Gold
+  // Turbo: Google Turbo colormap (Perceptually uniform, rich contrast)
+  turbo: [
+    { pos: 0.0, r: 48, g: 18, b: 59 },
+    { pos: 0.15, r: 70, g: 90, b: 215 },
+    { pos: 0.30, r: 27, g: 178, b: 230 },
+    { pos: 0.45, r: 74, g: 228, b: 130 },
+    { pos: 0.60, r: 194, g: 223, b: 35 },
+    { pos: 0.75, r: 253, g: 160, b: 37 },
+    { pos: 0.90, r: 230, g: 65, b: 25 },
+    { pos: 1.0, r: 122, g: 4, b: 3 },
+  ],
+  // Haline: Salinity / Haline scale (Deep oceanic blue -> Teal -> Mint -> Pale sand)
   haline: [
     { pos: 0.0, r: 0, g: 16, b: 64 },
     { pos: 0.25, r: 0, g: 95, b: 115 },
-    { pos: 0.5, r: 10, g: 147, b: 150 },
+    { pos: 0.50, r: 10, g: 147, b: 150 },
     { pos: 0.75, r: 148, g: 210, b: 189 },
     { pos: 1.0, r: 233, g: 216, b: 166 },
   ],
-  // CoolWarm: Blue -> White -> Red (Divergent)
+  // CoolWarm: Anomaly / Divergent scale
   coolwarm: [
     { pos: 0.0, r: 33, g: 102, b: 172 },
-    { pos: 0.5, r: 247, g: 247, b: 247 },
+    { pos: 0.50, r: 247, g: 247, b: 247 },
     { pos: 1.0, r: 178, g: 24, b: 43 },
   ],
-  // Viridis: Purple -> Blue -> Teal -> Green -> Yellow
+  // Viridis: Perceptually uniform scientific standard
   viridis: [
     { pos: 0.0, r: 68, g: 1, b: 84 },
     { pos: 0.25, r: 49, g: 104, b: 142 },
-    { pos: 0.5, r: 53, g: 183, b: 121 },
+    { pos: 0.50, r: 53, g: 183, b: 121 },
     { pos: 0.75, r: 181, g: 222, b: 43 },
     { pos: 1.0, r: 253, g: 231, b: 37 },
   ],
-  // Plasma: Deep Violet -> Magenta -> Orange -> Yellow
+  // Plasma: High-energy violet to warm gold
   plasma: [
     { pos: 0.0, r: 13, g: 8, b: 135 },
-    { pos: 0.3, r: 156, g: 23, b: 158 },
-    { pos: 0.6, r: 237, g: 105, b: 93 },
+    { pos: 0.30, r: 156, g: 23, b: 158 },
+    { pos: 0.60, r: 237, g: 105, b: 93 },
     { pos: 0.85, r: 251, g: 185, b: 56 },
     { pos: 1.0, r: 240, g: 249, b: 33 },
   ],
@@ -61,11 +80,10 @@ export function normalizeValue(
 ): number {
   const range = maxVal > minVal ? maxVal - minVal : 1.0;
   if (scaleType === "log") {
-    // Offset by minVal so log argument is strictly >= 0
     const offset = Math.max(0, val - minVal);
     return Math.log1p(offset) / Math.log1p(range);
   }
-  return (val - minVal) / range;
+  return Math.max(0, Math.min(1, (val - minVal) / range));
 }
 
 /**
@@ -74,9 +92,9 @@ export function normalizeValue(
 export function interpolateColor(
   t: number,
   paletteName: string = "thermal",
-  alpha: number = 215
+  alpha: number = 210
 ): [number, number, number, number] {
-  const stops = PALETTES[paletteName] || PALETTES.viridis;
+  const stops = PALETTES[paletteName] || PALETTES.thermal;
   const clampedT = Math.max(0, Math.min(1, t));
 
   for (let i = 0; i < stops.length - 1; i++) {
@@ -85,9 +103,11 @@ export function interpolateColor(
     if (clampedT >= s1.pos && clampedT <= s2.pos) {
       const span = s2.pos - s1.pos;
       const factor = span > 0 ? (clampedT - s1.pos) / span : 0;
-      const r = Math.round(s1.r + (s2.r - s1.r) * factor);
-      const g = Math.round(s1.g + (s2.g - s1.g) * factor);
-      const b = Math.round(s1.b + (s2.b - s1.b) * factor);
+      // Smooth cubic interpolation for natural, continuous gradient
+      const t3 = factor * factor * (3 - 2 * factor);
+      const r = Math.round(s1.r + (s2.r - s1.r) * t3);
+      const g = Math.round(s1.g + (s2.g - s1.g) * t3);
+      const b = Math.round(s1.b + (s2.b - s1.b) * t3);
       return [r, g, b, alpha];
     }
   }
@@ -97,41 +117,8 @@ export function interpolateColor(
 }
 
 /**
- * Accurately determines if a coordinate in the 68°–90°E, 6°–25°N bounding box is on land
- * (Indian mainland, Sri Lanka, Bangladesh, Pakistan, Myanmar) so the satellite terrain remains 100% pristine.
- */
-export function isSubcontinentLand(lat: number, lon: number): boolean {
-  // Sri Lanka
-  if (lat >= 5.8 && lat <= 9.9 && lon >= 79.5 && lon <= 82.0) return true;
-
-  // Indian Peninsula South (lat 8.0 - 15.0)
-  if (lat >= 8.0 && lat < 10.0 && lon >= 76.4 && lon <= 79.9) return true;
-  if (lat >= 10.0 && lat < 12.0 && lon >= 75.5 && lon <= 80.1) return true;
-  if (lat >= 12.0 && lat < 14.0 && lon >= 74.4 && lon <= 80.5) return true;
-  if (lat >= 14.0 && lat < 16.0 && lon >= 73.6 && lon <= 81.0) return true;
-
-  // Deccan / Central India (lat 16.0 - 20.0)
-  if (lat >= 16.0 && lat < 18.0 && lon >= 73.0 && lon <= 83.0) return true;
-  if (lat >= 18.0 && lat < 20.0 && lon >= 72.6 && lon <= 85.8) return true;
-
-  // Gujarat / Maharashtra / North-Central India (lat 20.0 - 22.5)
-  if (lat >= 20.0 && lat < 21.0 && lon >= 72.5 && lon <= 87.2) return true;
-  if (lat >= 20.8 && lat <= 23.4 && lon >= 69.3 && lon <= 73.5) return true; // Saurashtra & Kutch
-  if (lat >= 21.0 && lat < 22.5 && lon >= 72.0 && lon <= 88.5) return true;
-
-  // North India, Pakistan, Bangladesh mainland (lat >= 22.5)
-  if (lat >= 22.5 && lat <= 25.5) {
-    if (lon >= 68.8 && lon <= 89.4) return true;
-  }
-
-  // Myanmar / Arakan coast in northeast
-  if (lat >= 15.0 && lat <= 22.0 && lon >= 92.2) return true;
-
-  return false;
-}
-
-/**
  * Converts a 2D grid matrix of numbers/nulls into an HTML Canvas element
+ * using bilinear interpolation, land masking, and boundary feathering.
  */
 export function gridToCanvas(
   values: (number | null)[][],
@@ -139,71 +126,117 @@ export function gridToCanvas(
   maxVal: number,
   paletteName: string = "thermal",
   scaleType: "linear" | "log" = "linear",
-  targetWidth: number = 256,
-  targetHeight: number = 256
+  targetWidth: number = 1024,
+  targetHeight: number = 1024
 ): HTMLCanvasElement {
   const rows = values.length;
   const cols = values[0]?.length || 0;
 
-  const rawCanvas = document.createElement("canvas");
-  rawCanvas.width = cols;
-  rawCanvas.height = rows;
-  const ctx = rawCanvas.getContext("2d");
+  const outW = Math.max(targetWidth, 1024);
+  const outH = Math.max(targetHeight, 1024);
 
-  if (!ctx || rows === 0 || cols === 0) return rawCanvas;
+  const canvas = document.createElement("canvas");
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext("2d");
 
-  const imgData = ctx.createImageData(cols, rows);
+  if (!ctx || rows === 0 || cols === 0) return canvas;
+
+  const imgData = ctx.createImageData(outW, outH);
   const data = imgData.data;
 
-  // Map 2D values (lat rows: 0=South [6°N], rows-1=North [25°N])
-  // On canvas: y=0 is North, y=rows-1 is South
-  for (let r = 0; r < rows; r++) {
-    const canvasY = rows - 1 - r;
-    const rowValues = values[r];
-    if (!rowValues) continue;
+  // Outer boundary feathering radius (softens open ocean rectangular edges)
+  const featherPx = 18;
 
-    const lat = 6.0 + (r / Math.max(1, rows - 1)) * (25.0 - 6.0);
+  for (let py = 0; py < outH; py++) {
+    // Canvas y=0 is North (lat 25°N, row rows-1)
+    // Canvas y=outH-1 is South (lat 6°N, row 0)
+    const latFrac = 1.0 - py / (outH - 1);
+    const gridRow = latFrac * (rows - 1);
 
-    for (let c = 0; c < cols; c++) {
-      const lon = 68.0 + (c / Math.max(1, cols - 1)) * (90.0 - 68.0);
-      const val = rowValues[c];
-      const pixelIndex = (canvasY * cols + c) * 4;
+    const y0 = Math.floor(gridRow);
+    const y1 = Math.min(y0 + 1, rows - 1);
+    const dy = gridRow - y0;
 
-      // Soft edge vignette to avoid harsh square boundaries in open ocean
-      const edgeMargin = 5;
-      const distEdge = Math.min(c, cols - 1 - c, r, rows - 1 - r);
-      const edgeFactor = Math.min(1.0, Math.max(0.1, distEdge / edgeMargin));
+    for (let px = 0; px < outW; px++) {
+      // Canvas x=0 is West (lon 68°E, col 0)
+      // Canvas x=outW-1 is East (lon 90°E, col cols-1)
+      const lonFrac = px / (outW - 1);
+      const gridCol = lonFrac * (cols - 1);
 
-      if (val === null || isNaN(val) || isSubcontinentLand(lat, lon)) {
+      const x0 = Math.floor(gridCol);
+      const x1 = Math.min(x0 + 1, cols - 1);
+      const dx = gridCol - x0;
+
+      const w00 = (1 - dx) * (1 - dy);
+      const w10 = dx * (1 - dy);
+      const w01 = (1 - dx) * dy;
+      const w11 = dx * dy;
+
+      const v00 = values[y0]?.[x0];
+      const v10 = values[y0]?.[x1];
+      const v01 = values[y1]?.[x0];
+      const v11 = values[y1]?.[x1];
+
+      let waterWeight = 0;
+      let weightedSum = 0;
+
+      if (v00 !== null && v00 !== undefined && !isNaN(v00)) {
+        waterWeight += w00;
+        weightedSum += v00 * w00;
+      }
+      if (v10 !== null && v10 !== undefined && !isNaN(v10)) {
+        waterWeight += w10;
+        weightedSum += v10 * w10;
+      }
+      if (v01 !== null && v01 !== undefined && !isNaN(v01)) {
+        waterWeight += w01;
+        weightedSum += v01 * w01;
+      }
+      if (v11 !== null && v11 !== undefined && !isNaN(v11)) {
+        waterWeight += w11;
+        weightedSum += v11 * w11;
+      }
+
+      const pixelIndex = (py * outW + px) * 4;
+
+      // Land masking: if cell is mostly land, keep transparent so terrain shows pristine
+      if (waterWeight < 0.45) {
         data[pixelIndex] = 0;
         data[pixelIndex + 1] = 0;
         data[pixelIndex + 2] = 0;
         data[pixelIndex + 3] = 0;
-      } else {
-        const norm = normalizeValue(val, minVal, maxVal, scaleType);
-        const dynamicAlpha = Math.round(185 * edgeFactor);
-        const [red, green, blue, alpha] = interpolateColor(norm, paletteName, dynamicAlpha);
-        data[pixelIndex] = red;
-        data[pixelIndex + 1] = green;
-        data[pixelIndex + 2] = blue;
-        data[pixelIndex + 3] = alpha;
+        continue;
       }
+
+      const val = weightedSum / waterWeight;
+
+      // Smooth anti-aliased coastline transition
+      const coastFactor = Math.min(1.0, Math.max(0.0, (waterWeight - 0.45) / 0.35));
+      const smoothCoast = coastFactor * coastFactor * (3 - 2 * coastFactor);
+
+      // Edge feathering to eliminate harsh rectangle cutoff in open sea
+      const distLeft = px;
+      const distRight = outW - 1 - px;
+      const distTop = py;
+      const distBottom = outH - 1 - py;
+      const distEdge = Math.min(distLeft, distRight, distTop, distBottom);
+      const edgeFactor = Math.min(1.0, distEdge / featherPx);
+      const smoothEdge = edgeFactor * edgeFactor * (3 - 2 * edgeFactor);
+
+      const norm = normalizeValue(val, minVal, maxVal, scaleType);
+      const baseAlpha = 210;
+      const finalAlpha = Math.round(baseAlpha * smoothCoast * smoothEdge);
+
+      const [red, green, blue] = interpolateColor(norm, paletteName, finalAlpha);
+
+      data[pixelIndex] = red;
+      data[pixelIndex + 1] = green;
+      data[pixelIndex + 2] = blue;
+      data[pixelIndex + 3] = finalAlpha;
     }
   }
 
   ctx.putImageData(imgData, 0, 0);
-
-  // Bicubic upscaling
-  const smoothCanvas = document.createElement("canvas");
-  smoothCanvas.width = targetWidth;
-  smoothCanvas.height = targetHeight;
-  const smoothCtx = smoothCanvas.getContext("2d");
-  if (smoothCtx) {
-    smoothCtx.imageSmoothingEnabled = true;
-    smoothCtx.imageSmoothingQuality = "high";
-    smoothCtx.drawImage(rawCanvas, 0, 0, targetWidth, targetHeight);
-    return smoothCanvas;
-  }
-
-  return rawCanvas;
+  return canvas;
 }

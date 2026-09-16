@@ -80,6 +80,12 @@ function walk(dir) {
   }
 }
 
-console.log('Scanning and validating all JS files in frontend/out/_next...');
-walk('frontend/out/_next');
+const targetDir = path.resolve(__dirname, '../frontend/out/_next');
+if (!fs.existsSync(targetDir)) {
+  console.error('Target directory not found:', targetDir);
+  process.exit(1);
+}
+
+console.log('Scanning and validating all JS files in:', targetDir);
+walk(targetDir);
 console.log('ALL JAVASCRIPT CHUNKS ARE 100% VALIDATED WITH ZERO SYNTAX ERRORS!');

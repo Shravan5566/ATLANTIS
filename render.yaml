@@ -8,5 +8,13 @@ services:
     envVars:
       - key: PORT
         value: 10000
+      # SECURITY: Set CORS_ORIGINS as a secret in the Render dashboard.
+      # Do NOT use "*" in production. Set to your actual frontend domain, e.g.:
+      #   https://atlantis-ocean-platform.onrender.com
+      # or a comma-separated list if you have multiple origins.
       - key: CORS_ORIGINS
-        value: "*"
+        sync: false   # must be set manually in Render dashboard as a secret
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: info

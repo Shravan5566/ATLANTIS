@@ -59,8 +59,21 @@ export default function Navbar({ onToggleSidebar, sidebarOpen }: NavbarProps) {
           </span>
         </div>
 
+        {/* EEZ attribution — required by Flanders Marine Institute / VLIZ license */}
+        <div className="hidden lg:flex items-center text-[10px] text-slate-500 font-mono">
+          EEZ ©{" "}
+          <a
+            href="https://www.marineregions.org/"
+            target="_blank"
+            rel="noreferrer noopener"
+            className="text-slate-400 hover:text-slate-300 underline underline-offset-2 ml-1"
+          >
+            MarineRegions.org / VLIZ
+          </a>
+        </div>
+
         <a
-          href="http://localhost:8000/docs"
+          href="/docs"
           target="_blank"
           rel="noreferrer"
           className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-cyan-300 bg-cyan-950/70 hover:bg-cyan-900/90 border border-cyan-500/30 transition-all hover:shadow-md hover:shadow-cyan-500/20"

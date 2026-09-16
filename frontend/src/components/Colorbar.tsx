@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { ManifestResponse } from "@/lib/api";
-import { Settings, RotateCcw, Palette, Scale, ChevronDown, ChevronUp } from "lucide-react";
+import { Settings, RotateCcw, Palette, Scale, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 
 export interface ColorbarConfig {
   palette: string;
@@ -15,21 +15,48 @@ interface ColorbarProps {
   manifest?: ManifestResponse;
   selectedVariable: string;
   config: ColorbarConfig;
+  sliceRange?: { min: number; max: number };
   onChangeConfig: (newConfig: ColorbarConfig) => void;
 }
 
 const AVAILABLE_PALETTES = [
-  { id: "thermal", name: "Thermal", gradient: "from-[#030d40] via-[#00d2ff] via-[#f9d423] to-[#ff2a2a]" },
-  { id: "haline", name: "Haline", gradient: "from-[#001040] via-[#0a9396] via-[#94d2bd] to-[#e9d8a6]" },
-  { id: "coolwarm", name: "Cool-Warm", gradient: "from-[#2166ac] via-[#f7f7f7] to-[#b2182b]" },
-  { id: "viridis", name: "Viridis", gradient: "from-[#440154] via-[#31688e] via-[#35b779] to-[#fde725]" },
-  { id: "plasma", name: "Plasma", gradient: "from-[#0d0887] via-[#9c179e] via-[#ed695d] to-[#f0f921]" },
+  {
+    id: "thermal",
+    name: "Thermal (SST)",
+    gradient: "from-[#0a1c54] via-[#00a6fb] via-[#10b981] via-[#facc15] via-[#f97316] to-[#be123c]",
+  },
+  {
+    id: "turbo",
+    name: "Turbo",
+    gradient: "from-[#30123b] via-[#1bb2e6] via-[#4ae482] via-[#fdb425] to-[#7a0403]",
+  },
+  {
+    id: "haline",
+    name: "Haline",
+    gradient: "from-[#001040] via-[#0a9396] via-[#94d2bd] to-[#e9d8a6]",
+  },
+  {
+    id: "coolwarm",
+    name: "Cool-Warm",
+    gradient: "from-[#2166ac] via-[#f7f7f7] to-[#b2182b]",
+  },
+  {
+    id: "viridis",
+    name: "Viridis",
+    gradient: "from-[#440154] via-[#31688e] via-[#35b779] to-[#fde725]",
+  },
+  {
+    id: "plasma",
+    name: "Plasma",
+    gradient: "from-[#0d0887] via-[#9c179e] via-[#ed695d] to-[#f0f921]",
+  },
 ];
 
 export default function Colorbar({
   manifest,
   selectedVariable,
   config,
+  sliceRange,
   onChangeConfig,
 }: ColorbarProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -42,10 +69,19 @@ export default function Colorbar({
     max: 30,
   };
 
-  const handleResetDefaults = () => {
+  const handleResetToSlice = () => {
+    if (sliceRange) {
+      onChangeConfig({
+        ...config,
+        min: sliceRange.min,
+        max: sliceRange.max,
+      });
+    }
+  };
+
+  const handleResetToGlobal = () => {
     onChangeConfig({
-      palette: meta.palette || "thermal",
-      scaleType: "linear",
+      ...config,
       min: meta.min,
       max: meta.max,
     });
@@ -80,7 +116,7 @@ export default function Colorbar({
     if (config.scaleType === "log") {
       const range = config.max - config.min;
       const t = i / (steps - 1);
-      const logVal = config.min + (Math.expm1(t * Math.log1p(range)));
+      const logVal = config.min + Math.expm1(t * Math.log1p(range));
       return logVal.toFixed(1);
     } else {
       const val = config.min + ((config.max - config.min) / (steps - 1)) * i;
@@ -115,7 +151,7 @@ export default function Colorbar({
 
       {/* Main Gradient Bar */}
       <div
-        className={`h-3 w-full rounded-md shadow-inner border border-black/40 bg-gradient-to-r ${activePal.gradient}`}
+        className={`h-3.5 w-full rounded-md shadow-inner border border-black/40 bg-gradient-to-r ${activePal.gradient}`}
       />
 
       {/* Tick Values */}
@@ -184,21 +220,34 @@ export default function Colorbar({
             </div>
           </div>
 
-          {/* 3. Manual Min & Max Range Inputs */}
+          {/* 3. Range Calibration Presets & Inputs */}
           <div>
             <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-              <span>Dynamic Range Override</span>
+              <span>Calibration Presets</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 mb-2">
               <button
-                onClick={handleResetDefaults}
-                className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 font-sans normal-case text-[10px]"
+                onClick={handleResetToSlice}
+                disabled={!sliceRange}
+                className="flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-900/80 text-[10px] font-medium transition-all disabled:opacity-50"
+                title="Calibrate color range to active depth layer"
               >
-                <RotateCcw className="w-2.5 h-2.5" />
-                <span>Reset Defaults</span>
+                <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
+                <span>Auto: Active Layer</span>
+              </button>
+              <button
+                onClick={handleResetToGlobal}
+                className="flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 text-[10px] font-medium transition-all"
+                title="Use full column 3D volume range"
+              >
+                <RotateCcw className="w-2.5 h-2.5 text-slate-400" />
+                <span>Full Volume</span>
               </button>
             </div>
+
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-[9px] text-slate-500 mb-0.5">Min ({meta.units}):</label>
+                <label className="block text-[9px] text-slate-400 mb-0.5">Min ({meta.units}):</label>
                 <input
                   type="number"
                   step={0.5}
@@ -208,7 +257,7 @@ export default function Colorbar({
                 />
               </div>
               <div>
-                <label className="block text-[9px] text-slate-500 mb-0.5">Max ({meta.units}):</label>
+                <label className="block text-[9px] text-slate-400 mb-0.5">Max ({meta.units}):</label>
                 <input
                   type="number"
                   step={0.5}

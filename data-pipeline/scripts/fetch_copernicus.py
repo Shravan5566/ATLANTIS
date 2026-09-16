@@ -45,7 +45,16 @@ DATASET_MULTIYEAR = "cmems_mod_glo_phy_my_0.083deg_P1D-m"
 
 
 def verify_credentials() -> tuple[str, str]:
-    """Retrieves Copernicus credentials from environment variables."""
+    """Retrieves Copernicus credentials from environment variables.
+
+    SECURITY: Credentials come only from environment variables — never from
+    hardcoded values, command-line arguments, or config files checked into git.
+
+    WARNING: Do NOT set LOG_LEVEL=DEBUG when running in CI/CD environments.
+    The copernicusmarine library may log credentials at DEBUG level if the
+    underlying requests session is instrumented. Always use INFO or WARNING
+    in automated pipelines.
+    """
     username = os.getenv("COPERNICUS_USERNAME")
     password = os.getenv("COPERNICUS_PASSWORD")
 
@@ -57,9 +66,13 @@ def verify_credentials() -> tuple[str, str]:
         print("1. Register a free account at: https://data.marine.copernicus.eu")
         print("2. Set your credentials in backend/.env or root .env:")
         print("   COPERNICUS_USERNAME=your_actual_username")
-        print("   COPERNICUS_PASSWORD=your_actual_password")
+        print("   COPERNICUS_PASSWORD=<set in environment, never printed>")
         print("=" * 70 + "\n")
         sys.exit(1)
+
+    # Confirm credentials were found without echoing the actual password
+    masked = f"{username[:3]}***" if len(username) > 3 else "***"
+    print(f"[+] Copernicus credentials loaded for user: {masked}")
 
     return username, password
 

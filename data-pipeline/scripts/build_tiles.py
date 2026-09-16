@@ -57,6 +57,42 @@ VARIABLE_METADATA = {
     },
 }
 
+# Physical plausibility bounds for each variable.
+# Values outside these ranges are treated as fill-value artifacts and masked to NaN
+# so they become null in the output JSON rather than corrupt the frontend colorbar.
+PHYSICAL_BOUNDS: dict = {
+    "thetao": (-5.0, 40.0),     # Sea water temperature: -5°C to 40°C
+    "so": (0.0, 45.0),          # Salinity: 0 to 45 PSU
+    "uo": (-5.0, 5.0),          # Eastward velocity: ±5 m/s
+    "vo": (-5.0, 5.0),          # Northward velocity: ±5 m/s
+    "cur_speed": (0.0, 7.0),    # Current speed magnitude: 0 to 7 m/s
+}
+
+
+def apply_physical_bounds(values: np.ndarray, var: str) -> np.ndarray:
+    """Masks values outside physical plausibility bounds to NaN.
+
+    This catches fill-value artifacts (e.g., 9.969e+36 or 9999) that survived
+    NaN conversion, ensuring they become null in the output JSON.
+    Returns a copy so the original xarray dataset is not mutated.
+    """
+    bounds = PHYSICAL_BOUNDS.get(var)
+    if bounds is None:
+        return values  # Unknown variable — pass through unchanged
+
+    lo, hi = bounds
+    cleaned = values.copy()
+    out_of_range_mask = (cleaned < lo) | (cleaned > hi)
+    n_finite = np.sum(np.isfinite(cleaned))
+    n_bad = int(np.sum(out_of_range_mask & np.isfinite(cleaned)))
+
+    if n_bad > 0:
+        pct = (n_bad / max(n_finite, 1)) * 100
+        print(f"  [!] Physical range check '{var}': {n_bad} values ({pct:.1f}%) outside [{lo}, {hi}] — masking to NaN.")
+        cleaned[out_of_range_mask] = np.nan
+
+    return cleaned
+
 
 def generate_sample_netcdf(output_file: Path):
     """Generates a realistic synthetic Copernicus NetCDF file for India EEZ
@@ -244,7 +280,10 @@ def build_tiles(raw_file: Path = DEFAULT_RAW_FILE):
 
         for var in variables:
             var_dir = TILES_DIR / var
-            var_data = ds[var].values  # shape: (time, depth, lat, lon)
+            raw_var_data = ds[var].values  # shape: (time, depth, lat, lon)
+
+            # Apply physical plausibility bounds — mask fill-value artifacts to NaN
+            var_data = apply_physical_bounds(raw_var_data, var)
 
             for t_idx in range(len(timesteps)):
                 time_dir = var_dir / str(t_idx)

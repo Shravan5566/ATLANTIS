@@ -9,28 +9,61 @@ FastAPI REST API serving:
 - System health (/api/health)
 
 Features:
-- Full OpenAPI / Swagger documentation at /docs
+- OpenAPI / Swagger documentation at /docs (disabled in ENVIRONMENT=production)
 - In-memory LRU caching and indexed lookups for sub-millisecond responses
 - GZip compression middleware and pre-compressed .gz support
-- CORS enabled for Next.js frontend (http://localhost:3000)
+- CORS restricted to configured origins (never '*' in production)
+- Rate limiting via slowapi to prevent DoS on expensive endpoints
+- Security response headers on every response (CSP, X-Frame-Options, etc.)
+- Global exception handler — stack traces never leak to clients
 """
 
 import functools
 import gzip
 import json
+import logging
 import os
+import re
+import sys
+import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, Field
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from starlette.middleware.gzip import GZipMiddleware
+
+# ---------------------------------------------------------------------------
+# Structured logging — Render/cloud platforms capture stdout
+# ---------------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    stream=sys.stdout,
+)
+logger = logging.getLogger("atlantis")
 
 # Load environment configuration
 load_dotenv()
+
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+IS_PRODUCTION = ENVIRONMENT.lower() == "production"
+
+# ---------------------------------------------------------------------------
+# Input validation constants
+# ---------------------------------------------------------------------------
+# Only allow safe variable names: lowercase letters and underscores
+_VARIABLE_PATTERN = re.compile(r"^[a-z_]{1,32}$")
+# Argo WMO IDs are 7 digits; allow up to 12 alphanumeric chars for safety
+_FLOAT_ID_PATTERN = re.compile(r"^[a-zA-Z0-9]{1,12}$")
 
 # Directories
 BACKEND_DIR = Path(__file__).resolve().parent
@@ -156,6 +189,13 @@ class GliderTrackItem(BaseModel):
 # FastAPI Application & Middleware Initialization
 # ---------------------------------------------------------------------------
 
+# Rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
+# Hide /docs and /redoc in production to reduce attack surface
+_docs_url = None if IS_PRODUCTION else "/docs"
+_redoc_url = None if IS_PRODUCTION else "/redoc"
+
 app = FastAPI(
     title="SIH26067 – India EEZ Ocean Visualization API",
     description=(
@@ -163,31 +203,77 @@ app = FastAPI(
         "Argo in-situ profiles, and glider tracks for India's Exclusive Economic Zone (68°–90°E, 6°–25°N)."
     ),
     version="0.1.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=_docs_url,
+    redoc_url=_redoc_url,
 )
 
-# CORS Configuration
+# Attach rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS Configuration — never wildcard in production
 cors_env = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
 allowed_origins = [o.strip() for o in cors_env.split(",") if o.strip()]
+
+if IS_PRODUCTION and "*" in allowed_origins:
+    logger.error(
+        "SECURITY: CORS_ORIGINS contains '*' in production! "
+        "Set CORS_ORIGINS to your actual frontend domain in the Render dashboard."
+    )
+    # Override to a safe default rather than crashing — log loudly
+    allowed_origins = ["https://atlantis-ocean-platform.onrender.com"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET"],  # All public endpoints are GET-only
+    allow_headers=["Accept", "Accept-Encoding", "Cache-Control", "Content-Type"],
 )
 
 # Automatic GZip compression for responses > 500 bytes
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
+if IS_PRODUCTION:
+    logger.info(
+        "ATLANTIS backend starting in PRODUCTION mode | "
+        f"CORS origins: {allowed_origins} | "
+        "API docs: disabled"
+    )
+else:
+    logger.info(
+        "ATLANTIS backend starting in DEVELOPMENT mode | "
+        f"CORS origins: {allowed_origins} | "
+        "API docs: /docs /redoc"
+    )
 
-# Performance & 60 FPS Asset Caching Middleware
+
+# Security Headers + Performance Cache Middleware
 @app.middleware("http")
-async def add_performance_cache_headers(request: Request, call_next):
+async def add_security_and_cache_headers(request: Request, call_next):
     response = await call_next(request)
     path = request.url.path
+
+    # ── Security headers (applied to every response) ──────────────────────
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    # CSP: permissive enough for CesiumJS (WebGL, workers, blob URLs, data URIs)
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-eval' blob:; "
+        "worker-src blob: 'self'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com data:; "
+        "img-src 'self' data: blob: https:; "
+        "connect-src 'self' https://api.cesium.com https://assets.cesium.com "
+        "https://ion.cesium.com https://tiles.cesium.com; "
+        "frame-ancestors 'none';"
+    )
+
+    # ── Performance cache headers ─────────────────────────────────────────
     if (
         path.startswith("/cesium/")
         or path.startswith("/_next/")
@@ -199,6 +285,26 @@ async def add_performance_cache_headers(request: Request, call_next):
     elif path.startswith("/api/manifest"):
         response.headers["Cache-Control"] = "public, max-age=3600"
     return response
+
+
+# ---------------------------------------------------------------------------
+# Global Exception Handler — no stack traces leak to clients
+# ---------------------------------------------------------------------------
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catches all unhandled exceptions. Logs full details server-side; returns
+    a generic 500 to the client so internal paths/library versions never leak."""
+    logger.error(
+        "Unhandled exception on %s %s:\n%s",
+        request.method,
+        request.url,
+        traceback.format_exc(),
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Internal server error. Please try again later."},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -241,7 +347,7 @@ def get_argo_profiles_index() -> Dict[str, List[Dict[str, Any]]]:
             detail="Argo profiles file not found. Please execute 'python data-pipeline/scripts/fetch_argo.py' first.",
         )
 
-    print("[*] Building in-memory index for Argo depth profiles...")
+    logger.info("Building in-memory index for Argo depth profiles...")
     with open(ARGO_PROFILES_FILE, "r", encoding="utf-8") as f:
         profiles_list = json.load(f)
 
@@ -253,7 +359,7 @@ def get_argo_profiles_index() -> Dict[str, List[Dict[str, Any]]]:
         index[fid].append(item)
 
     _ARGO_PROFILES_INDEX = index
-    print(f"[+] Argo profiles indexed: {len(index)} distinct floats.")
+    logger.info("Argo profiles indexed: %d distinct floats.", len(index))
     return _ARGO_PROFILES_INDEX
 
 
@@ -271,9 +377,46 @@ def load_glider_tracks() -> List[Dict[str, Any]]:
 
 @functools.lru_cache(maxsize=512)
 def load_field_tile_bytes(variable: str, time_index: int, depth_index: int) -> bytes:
-    """Reads and caches tile JSON bytes from disk."""
+    """Reads and caches tile JSON bytes from disk.
+
+    Security: variable is validated against the manifest allowlist AND checked
+    for safe characters before path construction. time_index and depth_index
+    are checked against manifest bounds so out-of-range indices return a clean
+    422 rather than a confusing 500 or path-traversal attempt.
+    """
+    # Double-check variable only contains safe characters (defence in depth)
+    if not _VARIABLE_PATTERN.match(variable):
+        raise HTTPException(status_code=400, detail="Invalid variable name format.")
+
+    # Validate indices against manifest bounds
+    manifest = load_manifest()
+    max_time = len(manifest.get("timesteps", [])) - 1
+    max_depth = len(manifest.get("depth_levels", [])) - 1
+
+    if time_index > max_time:
+        raise HTTPException(
+            status_code=422,
+            detail=f"time index {time_index} out of range. Valid range: 0\u2013{max_time}.",
+        )
+    if depth_index > max_depth:
+        raise HTTPException(
+            status_code=422,
+            detail=f"depth index {depth_index} out of range. Valid range: 0\u2013{max_depth}.",
+        )
+
+    # Construct path — both components are fully validated integers / safe strings
     gz_path = TILES_DIR / variable / str(time_index) / f"{depth_index}.json.gz"
     json_path = TILES_DIR / variable / str(time_index) / f"{depth_index}.json"
+
+    # Paranoia check: confirm resolved path is still inside TILES_DIR
+    try:
+        gz_path.resolve().relative_to(TILES_DIR.resolve())
+    except ValueError:
+        logger.warning(
+            "Path traversal attempt blocked: variable=%s t=%d d=%d",
+            variable, time_index, depth_index
+        )
+        raise HTTPException(status_code=400, detail="Invalid request parameters.")
 
     if gz_path.exists():
         with gzip.open(gz_path, "rb") as gz:
@@ -306,7 +449,7 @@ async def api_root():
             "argo_positions": "/api/argo/positions",
             "argo_profile": "/api/argo/profile/{float_id}",
             "glider_tracks": "/api/glider/tracks",
-            "documentation": "/docs",
+            "documentation": "/docs" if not IS_PRODUCTION else "(disabled in production)",
         },
     }
 
@@ -349,7 +492,8 @@ async def health_root_alias():
         "available depth levels (in meters), available ISO timesteps, and the India EEZ bounding box."
     ),
 )
-async def get_manifest():
+@limiter.limit("120/minute")
+async def get_manifest(request: Request):
     return load_manifest()
 
 
@@ -363,11 +507,20 @@ async def get_manifest():
         "timestep index, and depth level index. Land and masked areas are null."
     ),
 )
+@limiter.limit("30/minute")
 async def get_field(
+    request: Request,
     variable: str = Query(..., description="Variable key: thetao, so, uo, vo, or cur_speed"),
-    time: int = Query(0, alias="time", ge=0, description="Timestep index (0 to N-1)"),
-    depth: int = Query(0, alias="depth", ge=0, description="Depth level index (0 to N-1)"),
+    time: int = Query(0, alias="time", ge=0, le=9999, description="Timestep index (0 to N-1)"),
+    depth: int = Query(0, alias="depth", ge=0, le=9999, description="Depth level index (0 to N-1)"),
 ):
+    # Validate variable name format first (fast fail before manifest load)
+    if not _VARIABLE_PATTERN.match(variable):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid variable name. Must be lowercase letters and underscores only.",
+        )
+
     # Verify variable exists in manifest
     manifest = load_manifest()
     if variable not in manifest["variables"]:
@@ -377,7 +530,7 @@ async def get_field(
             detail=f"Invalid variable '{variable}'. Available variables: {valid_vars}",
         )
 
-    # Fetch cached JSON bytes
+    # Fetch cached JSON bytes (bounds-checks time/depth inside)
     tile_bytes = load_field_tile_bytes(variable, time, depth)
     return Response(content=tile_bytes, media_type="application/json")
 
@@ -389,7 +542,8 @@ async def get_field(
     summary="Get Latest Argo Float Positions",
     description="Returns the latest coordinates, timestamp, and profile depth spans for all active Argo floats in India's EEZ.",
 )
-async def get_argo_positions():
+@limiter.limit("60/minute")
+async def get_argo_positions(request: Request):
     return load_argo_positions()
 
 
@@ -400,9 +554,17 @@ async def get_argo_positions():
     summary="Get Float Depth Profile History",
     description="Returns the full depth-resolved temperature and salinity profile history for a specific Argo float WMO ID.",
 )
-async def get_argo_profile(float_id: str):
+@limiter.limit("60/minute")
+async def get_argo_profile(request: Request, float_id: str):
+    # Validate float_id: alphanumeric only, max 12 characters
+    if not _FLOAT_ID_PATTERN.match(float_id):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid float_id format. Must be alphanumeric, 1\u201312 characters.",
+        )
+
     index = get_argo_profiles_index()
-    float_id_clean = str(float_id).strip()
+    float_id_clean = float_id.strip()
 
     if float_id_clean not in index:
         available_sample = list(index.keys())[:5]
@@ -424,7 +586,8 @@ async def get_argo_profile(float_id: str):
         "including 3D depth, temperature, salinity, coordinates, and demonstration badges."
     ),
 )
-async def get_glider_tracks():
+@limiter.limit("60/minute")
+async def get_glider_tracks(request: Request):
     return load_glider_tracks()
 
 
