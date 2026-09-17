@@ -89,9 +89,9 @@ export default function GlobeWrapper(props: GlobeWrapperProps) {
   if (!GlobeComponent) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-slate-950 text-cyan-400 font-mono text-sm">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-          <span>Loading 3D Geospatial Engine...</span>
+        <div className="flex flex-col items-center gap-3 text-sky-400 font-mono text-sm">
+          <div className="w-8 h-8 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
+          <span>Loading ATLANTIS 3D Cesium Viewport...</span>
         </div>
       </div>
     );

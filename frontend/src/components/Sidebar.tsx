@@ -69,7 +69,7 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`fixed top-16 left-0 bottom-10 w-80 z-40 ocean-glass border-r border-cyan-500/20 flex flex-col transition-transform duration-300 ease-in-out ${
+      className={`fixed top-16 left-0 bottom-10 w-80 z-40 ocean-glass border-r border-white/[0.08] flex flex-col transition-transform duration-300 ease-in-out ${
         isOpen ? "translate-x-0" : "-translate-x-full"
       }`}
     >
@@ -80,9 +80,9 @@ export default function Sidebar({
         aria-label="Toggle Ocean Controls Sidebar"
         className="absolute left-full top-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-1
           w-5 h-20 rounded-r-xl
-          ocean-glass border border-l-0 border-cyan-500/30
-          text-cyan-400 hover:text-white hover:bg-cyan-950/80
-          shadow-lg shadow-cyan-950/40 cursor-pointer transition-colors duration-200"
+          ocean-glass border border-l-0 border-white/[0.1]
+          text-slate-300 hover:text-white hover:bg-white/[0.08]
+          shadow-lg shadow-black/40 cursor-pointer transition-colors duration-200"
       >
         <svg
           className={`w-3 h-3 transition-transform duration-300 ${isOpen ? "" : "rotate-180"}`}
@@ -99,15 +99,15 @@ export default function Sidebar({
       </button>
 
       {/* Sidebar Header */}
-      <div className="p-4 border-b border-cyan-500/20 flex items-center justify-between">
-        <div className="flex items-center gap-2.5 text-cyan-300 font-bold text-sm tracking-wider uppercase">
+      <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
+        <div className="flex items-center gap-2.5 text-slate-100 font-bold text-sm tracking-wider uppercase">
           <div className="relative w-5 h-5 flex items-center justify-center">
             <Image
               src="/atlantis-icon.png"
               alt="ATLANTIS"
               width={20}
               height={18}
-              className="w-4.5 h-auto object-contain drop-shadow-[0_0_8px_rgba(0,210,255,0.6)]"
+              className="w-4.5 h-auto object-contain drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
             />
           </div>
           <span>Ocean Controls</span>
@@ -131,10 +131,10 @@ export default function Sidebar({
         />
 
         {/* 2. Visualization Mode Switch: 2D Single Slice vs 3D Volumetric Water Column */}
-        <div className="space-y-2 p-3 rounded-xl ocean-glass-subtle border border-cyan-500/20">
+        <div className="space-y-2 p-3 rounded-xl ocean-glass-subtle">
           <div className="flex items-center justify-between text-xs text-slate-300 font-semibold uppercase tracking-wider">
             <span>Display Mode</span>
-            <span className="text-[10px] text-cyan-400 font-mono font-bold">
+            <span className="text-[10px] text-sky-400 font-mono font-bold">
               {viewMode === "volumetric" ? "3D Multi-Layer" : "2D Single Layer"}
             </span>
           </div>
@@ -142,10 +142,10 @@ export default function Sidebar({
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => onViewModeChange("single")}
-              className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-semibold transition-all border ${
+              className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-semibold transition-all ${
                 viewMode === "single"
-                  ? "bg-cyan-950/90 border-cyan-400 text-white shadow-md shadow-cyan-900/40"
-                  : "bg-slate-900/60 border-slate-700/60 text-slate-400 hover:text-white"
+                  ? "ocean-glass-active text-white"
+                  : "ocean-glass-interactive text-slate-400 hover:text-white"
               }`}
             >
               <LayersIcon className="w-3.5 h-3.5" />
@@ -158,23 +158,23 @@ export default function Sidebar({
                 // Center camera on the 3D ocean water column with an isometric perspective tilt
                 onFlyToRegion(1.5, 74.0, 2600000, -40, 18);
               }}
-              className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-semibold transition-all border ${
+              className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-semibold transition-all ${
                 viewMode === "volumetric"
-                  ? "bg-gradient-to-r from-teal-900 to-cyan-950 border-emerald-400 text-white shadow-md shadow-teal-900/50 ring-1 ring-emerald-400/40"
-                  : "bg-slate-900/60 border-slate-700/60 text-slate-400 hover:text-white"
+                  ? "ocean-glass-active text-white"
+                  : "ocean-glass-interactive text-slate-400 hover:text-white"
               }`}
             >
-              <Box className="w-3.5 h-3.5 text-emerald-400" />
+              <Box className="w-3.5 h-3.5 text-sky-400" />
               <span>3D Volumetric</span>
             </button>
           </div>
 
           {/* If Volumetric Mode: Show Vertical Exaggeration Slider & 3D Tilt Helper */}
           {viewMode === "volumetric" ? (
-            <div className="pt-2 space-y-2 border-t border-slate-800">
+            <div className="pt-2 space-y-2 border-t border-white/[0.06]">
               <div className="flex items-center justify-between text-[11px]">
                 <span className="text-slate-300 font-medium">Vertical Exaggeration:</span>
-                <span className="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 font-mono font-bold">
+                <span className="px-2 py-0.5 rounded bg-sky-500/10 border border-sky-400/25 text-sky-300 font-mono font-bold">
                   {verticalExaggeration}x
                 </span>
               </div>
@@ -185,7 +185,7 @@ export default function Sidebar({
                 step={25}
                 value={verticalExaggeration}
                 onChange={(e) => onExaggerationChange(parseInt(e.target.value, 10))}
-                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-400"
+                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-400"
               />
               <div className="flex justify-between text-[10px] text-slate-400 font-mono">
                 <span>50x</span>
@@ -196,7 +196,7 @@ export default function Sidebar({
               <div className="grid grid-cols-2 gap-1.5 pt-1">
                 <button
                   onClick={() => onFlyToRegion(1.5, 74.0, 2600000, -40, 18)}
-                  className="py-1.5 px-2 rounded-lg bg-teal-950/70 hover:bg-teal-900/90 border border-teal-500/40 text-[11px] text-teal-300 flex items-center justify-center gap-1.5 transition-all"
+                  className="py-1.5 px-2 rounded-lg ocean-glass-interactive text-[11px] text-slate-300 hover:text-sky-300 flex items-center justify-center gap-1.5 transition-all"
                   title="3D Oblique Perspective Angle"
                 >
                   <Maximize2 className="w-3 h-3" />
@@ -204,7 +204,7 @@ export default function Sidebar({
                 </button>
                 <button
                   onClick={() => onFlyToRegion(12.0, 57.0, 2200000, -28, 76)}
-                  className="py-1.5 px-2 rounded-lg bg-cyan-950/70 hover:bg-cyan-900/90 border border-cyan-500/40 text-[11px] text-cyan-300 flex items-center justify-center gap-1.5 transition-all"
+                  className="py-1.5 px-2 rounded-lg ocean-glass-interactive text-[11px] text-slate-300 hover:text-sky-300 flex items-center justify-center gap-1.5 transition-all"
                   title="3D Side Profile Horizon Angle"
                 >
                   <Compass className="w-3 h-3" />
@@ -232,7 +232,7 @@ export default function Sidebar({
         {/* 4. In-Situ Observational Layers Toggle */}
         <div className="space-y-2.5 pt-1">
           <div className="flex items-center gap-1.5 text-[11px] text-slate-300 font-semibold uppercase tracking-wider">
-            <Eye className="w-3.5 h-3.5 text-cyan-400" />
+            <Eye className="w-3.5 h-3.5 text-sky-400" />
             <span>In-Situ Overlays</span>
           </div>
 
@@ -240,14 +240,14 @@ export default function Sidebar({
             {/* Argo floats toggle */}
             <button
               onClick={onToggleArgo}
-              className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${
+              className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-all ${
                 showArgo
-                  ? "bg-cyan-950/70 border-cyan-400/80 text-white shadow-sm shadow-cyan-500/20"
-                  : "bg-slate-900/50 border-slate-700/60 text-slate-400 hover:text-slate-200"
+                  ? "ocean-glass-active text-white"
+                  : "ocean-glass-interactive text-slate-400 hover:text-slate-200"
               }`}
             >
               <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-lg ${showArgo ? "bg-cyan-500/20 text-cyan-300" : "bg-slate-800 text-slate-400"}`}>
+                <div className={`p-1.5 rounded-lg ${showArgo ? "bg-sky-500/20 text-sky-300" : "bg-white/[0.05] text-slate-400"}`}>
                   <Anchor className="w-3.5 h-3.5" />
                 </div>
                 <div className="text-left">
@@ -257,7 +257,7 @@ export default function Sidebar({
               </div>
               <div
                 className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                  showArgo ? "bg-cyan-400 border-cyan-300" : "border-slate-600"
+                  showArgo ? "bg-sky-400 border-sky-300" : "border-slate-600"
                 }`}
               >
                 {showArgo && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
@@ -267,14 +267,14 @@ export default function Sidebar({
             {/* Glider tracks toggle */}
             <button
               onClick={onToggleGliders}
-              className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${
+              className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-all ${
                 showGliders
-                  ? "bg-teal-950/70 border-teal-400/80 text-white shadow-sm shadow-teal-500/20"
-                  : "bg-slate-900/50 border-slate-700/60 text-slate-400 hover:text-slate-200"
+                  ? "ocean-glass-active text-white"
+                  : "ocean-glass-interactive text-slate-400 hover:text-slate-200"
               }`}
             >
               <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-lg ${showGliders ? "bg-teal-500/20 text-teal-300" : "bg-slate-800 text-slate-400"}`}>
+                <div className={`p-1.5 rounded-lg ${showGliders ? "bg-amber-500/20 text-amber-300" : "bg-white/[0.05] text-slate-400"}`}>
                   <Navigation className="w-3.5 h-3.5" />
                 </div>
                 <div className="text-left">
@@ -284,7 +284,7 @@ export default function Sidebar({
               </div>
               <div
                 className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                  showGliders ? "bg-teal-400 border-teal-300" : "border-slate-600"
+                  showGliders ? "bg-amber-400 border-amber-300" : "border-slate-600"
                 }`}
               >
                 {showGliders && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
@@ -294,33 +294,33 @@ export default function Sidebar({
         </div>
 
         {/* 5. Geographic Presets */}
-        <div className="space-y-2 pt-1 border-t border-slate-800/80">
+        <div className="space-y-2 pt-1 border-t border-white/[0.06]">
           <div className="flex items-center gap-1.5 text-[11px] text-slate-300 font-semibold uppercase tracking-wider">
-            <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+            <MapPin className="w-3.5 h-3.5 text-sky-400" />
             <span>EEZ Sub-Basins</span>
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             <button
               onClick={() => onFlyToRegion(15.5, 79.0, 2600000, -85, 0)}
-              className="px-2 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-[11px] text-slate-300 hover:text-white transition-all text-center"
+              className="px-2 py-1.5 rounded-lg ocean-glass-interactive text-[11px] text-slate-300 hover:text-white transition-all text-center"
             >
               🇮🇳 Entire EEZ
             </button>
             <button
               onClick={() => onFlyToRegion(16.0, 71.5, 1500000, -55, 30)}
-              className="px-2 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-[11px] text-slate-300 hover:text-white transition-all text-center"
+              className="px-2 py-1.5 rounded-lg ocean-glass-interactive text-[11px] text-slate-300 hover:text-white transition-all text-center"
             >
               🌊 Arabian Sea
             </button>
             <button
               onClick={() => onFlyToRegion(15.0, 86.5, 1600000, -55, -30)}
-              className="px-2 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-[11px] text-slate-300 hover:text-white transition-all text-center"
+              className="px-2 py-1.5 rounded-lg ocean-glass-interactive text-[11px] text-slate-300 hover:text-white transition-all text-center"
             >
               🌀 Bay of Bengal
             </button>
             <button
               onClick={() => onFlyToRegion(10.5, 73.5, 1100000, -60, 20)}
-              className="px-2 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-[11px] text-slate-300 hover:text-white transition-all text-center"
+              className="px-2 py-1.5 rounded-lg ocean-glass-interactive text-[11px] text-slate-300 hover:text-white transition-all text-center"
             >
               🏝️ Lakshadweep
             </button>
@@ -329,7 +329,7 @@ export default function Sidebar({
       </div>
 
       {/* Footer Info */}
-      <div className="p-3 bg-slate-950/70 border-t border-cyan-500/20 text-[10px] text-slate-400 flex items-center justify-center gap-2 font-mono">
+      <div className="p-3 bg-slate-950/40 border-t border-white/[0.06] text-[10px] text-slate-400 flex items-center justify-center gap-2 font-mono">
         <Image
           src="/atlantis-icon.png"
           alt="ATLANTIS"

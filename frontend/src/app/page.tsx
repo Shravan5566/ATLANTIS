@@ -186,9 +186,9 @@ export default function Home() {
         className="flex fixed z-50 top-1/2 -translate-y-1/2 right-0
           flex-col items-center justify-center gap-1
           w-5 h-20 rounded-l-xl
-          ocean-glass border border-r-0 border-cyan-500/30
-          text-cyan-400 hover:text-white hover:bg-cyan-950/80
-          shadow-lg shadow-cyan-950/40 cursor-pointer transition-colors duration-200"
+          ocean-glass border border-r-0 border-white/[0.1]
+          text-slate-300 hover:text-white hover:bg-white/[0.08]
+          shadow-lg shadow-black/40 cursor-pointer transition-colors duration-200"
       >
         <svg
           className={`w-3 h-3 transition-transform duration-300 ${rightPanelOpen ? "rotate-180" : ""}`}

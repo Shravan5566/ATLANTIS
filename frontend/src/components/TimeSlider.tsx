@@ -44,13 +44,13 @@ export default function TimeSlider({ timesteps, timeIndex, onTimeChange }: TimeS
   };
 
   return (
-    <div className="space-y-2.5 p-3.5 rounded-xl ocean-glass-subtle border border-cyan-500/20">
+    <div className="space-y-2.5 p-3.5 rounded-xl ocean-glass-subtle">
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1.5 text-slate-300 font-semibold uppercase tracking-wider text-[11px]">
-          <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+          <Calendar className="w-3.5 h-3.5 text-sky-400" />
           <span>Observation Timestep</span>
         </div>
-        <div className="px-2.5 py-1 rounded-lg bg-cyan-950/90 border border-cyan-400/40 text-cyan-300 font-mono font-bold text-xs">
+        <div className="px-2.5 py-1 rounded-lg bg-sky-500/10 border border-sky-400/25 text-sky-300 font-mono font-bold text-xs shadow-sm">
           {currentTimeStr}
         </div>
       </div>
@@ -62,8 +62,8 @@ export default function TimeSlider({ timesteps, timeIndex, onTimeChange }: TimeS
           aria-label={isPlaying ? "Pause Animation" : "Play Animation"}
           className={`p-2 rounded-lg transition-all border ${
             isPlaying
-              ? "bg-amber-500/20 border-amber-400 text-amber-300 shadow-md shadow-amber-500/20"
-              : "bg-cyan-500/20 hover:bg-cyan-500/30 border-cyan-400 text-cyan-300 shadow-md shadow-cyan-500/20"
+              ? "bg-amber-500/15 border-amber-400/40 text-amber-300 shadow-sm"
+              : "bg-sky-500/15 hover:bg-sky-500/25 border-sky-400/30 text-sky-300 shadow-sm hover:border-sky-400/50"
           }`}
         >
           {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
@@ -72,7 +72,7 @@ export default function TimeSlider({ timesteps, timeIndex, onTimeChange }: TimeS
         <button
           onClick={handlePrev}
           title="Previous Step"
-          className="p-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-300 border border-slate-700"
+          className="p-1.5 rounded-lg ocean-glass-interactive text-slate-300 hover:text-white"
         >
           <SkipBack className="w-3.5 h-3.5" />
         </button>
@@ -87,13 +87,13 @@ export default function TimeSlider({ timesteps, timeIndex, onTimeChange }: TimeS
             setIsPlaying(false);
             onTimeChange(parseInt(e.target.value, 10));
           }}
-          className="flex-1 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+          className="flex-1 h-1.5 bg-slate-800/90 rounded-lg appearance-none cursor-pointer accent-sky-400"
         />
 
         <button
           onClick={handleNext}
           title="Next Step"
-          className="p-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-300 border border-slate-700"
+          className="p-1.5 rounded-lg ocean-glass-interactive text-slate-300 hover:text-white"
         >
           <SkipForward className="w-3.5 h-3.5" />
         </button>

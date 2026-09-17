@@ -97,11 +97,11 @@ export default function ArgoProfileDrawer({
   if (!selectedFloat) return null;
 
   return (
-    <aside className="fixed top-16 right-0 bottom-10 w-96 sm:w-[440px] z-50 ocean-glass border-l border-cyan-500/20 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+    <aside className="fixed top-16 right-0 bottom-10 w-96 sm:w-[440px] z-50 ocean-glass border-l border-white/[0.08] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="p-4 border-b border-cyan-500/20 flex items-center justify-between bg-slate-950/70">
+      <div className="p-4 border-b border-white/[0.08] flex items-center justify-between bg-slate-950/40">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-cyan-950 border border-cyan-400/40 text-cyan-400">
+          <div className="p-2 rounded-xl bg-sky-500/10 border border-sky-400/25 text-sky-400">
             <Anchor className="w-5 h-5" />
           </div>
           <div>
@@ -109,7 +109,7 @@ export default function ArgoProfileDrawer({
               <h2 className="text-base font-bold text-white tracking-wide">
                 Argo Float #{selectedFloat.float_id}
               </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-400/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-sky-500/10 text-sky-300 border border-sky-400/25">
                 WMO ID
               </span>
             </div>
@@ -126,7 +126,7 @@ export default function ArgoProfileDrawer({
       </div>
 
       {/* Float Meta Stats Grid */}
-      <div className="p-4 border-b border-slate-800/80 bg-slate-900/40 grid grid-cols-2 gap-2 text-xs">
+      <div className="p-4 border-b border-white/[0.06] bg-slate-900/20 grid grid-cols-2 gap-2 text-xs">
         <div className="p-2 rounded-lg ocean-glass-subtle space-y-1">
           <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
             <Compass className="w-3.5 h-3.5 text-cyan-400" />
@@ -176,7 +176,7 @@ export default function ArgoProfileDrawer({
             onChange={(e) =>
               setSelectedCycle(e.target.value === "all" ? "all" : parseInt(e.target.value, 10))
             }
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-400"
+            className="w-full bg-slate-900/80 border border-white/[0.1] rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-400/50"
           >
             {availableCycles.map(({ cycle, time }) => (
               <option key={cycle} value={cycle}>
@@ -191,11 +191,11 @@ export default function ArgoProfileDrawer({
           <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">
             View Mode
           </label>
-          <div className="flex rounded-lg border border-slate-700 overflow-hidden text-[11px]">
+          <div className="flex rounded-lg border border-white/[0.08] overflow-hidden text-[11px]">
             <button
               onClick={() => setDisplayMode("chart")}
-              className={`flex items-center gap-1 px-2.5 py-1.5 ${
-                displayMode === "chart" ? "bg-cyan-600 text-white font-bold" : "bg-slate-900 text-slate-400"
+              className={`flex items-center gap-1 px-2.5 py-1.5 transition-all ${
+                displayMode === "chart" ? "ocean-glass-active text-white font-semibold" : "bg-slate-900/60 text-slate-400 hover:text-white"
               }`}
             >
               <LineChartIcon className="w-3 h-3" />
@@ -203,8 +203,8 @@ export default function ArgoProfileDrawer({
             </button>
             <button
               onClick={() => setDisplayMode("table")}
-              className={`flex items-center gap-1 px-2.5 py-1.5 ${
-                displayMode === "table" ? "bg-cyan-600 text-white font-bold" : "bg-slate-900 text-slate-400"
+              className={`flex items-center gap-1 px-2.5 py-1.5 transition-all ${
+                displayMode === "table" ? "ocean-glass-active text-white font-semibold" : "bg-slate-900/60 text-slate-400 hover:text-white"
               }`}
             >
               <TableIcon className="w-3 h-3" />
@@ -219,27 +219,27 @@ export default function ArgoProfileDrawer({
             <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">
               Display Curve
             </label>
-            <div className="flex rounded-lg border border-slate-700 overflow-hidden text-[11px]">
+            <div className="flex rounded-lg border border-white/[0.08] overflow-hidden text-[11px]">
               <button
                 onClick={() => setActiveParam("both")}
-                className={`px-2 py-1.5 ${
-                  activeParam === "both" ? "bg-cyan-600 text-white font-bold" : "bg-slate-900 text-slate-400"
+                className={`px-2 py-1.5 transition-all ${
+                  activeParam === "both" ? "ocean-glass-active text-white font-semibold" : "bg-slate-900/60 text-slate-400 hover:text-white"
                 }`}
               >
                 Both
               </button>
               <button
                 onClick={() => setActiveParam("temperature")}
-                className={`px-2 py-1.5 ${
-                  activeParam === "temperature" ? "bg-rose-600 text-white font-bold" : "bg-slate-900 text-slate-400"
+                className={`px-2 py-1.5 transition-all ${
+                  activeParam === "temperature" ? "ocean-glass-active text-rose-300 font-semibold" : "bg-slate-900/60 text-slate-400 hover:text-white"
                 }`}
               >
                 Temp
               </button>
               <button
                 onClick={() => setActiveParam("salinity")}
-                className={`px-2 py-1.5 ${
-                  activeParam === "salinity" ? "bg-cyan-600 text-white font-bold" : "bg-slate-900 text-slate-400"
+                className={`px-2 py-1.5 transition-all ${
+                  activeParam === "salinity" ? "ocean-glass-active text-sky-300 font-semibold" : "bg-slate-900/60 text-slate-400 hover:text-white"
                 }`}
               >
                 Sal
@@ -379,8 +379,8 @@ export default function ArgoProfileDrawer({
                   content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="ocean-glass p-2.5 rounded-lg border border-cyan-500/30 text-xs space-y-1 shadow-xl">
-                          <p className="font-bold text-cyan-300">Depth: {label} m</p>
+                        <div className="ocean-glass p-2.5 rounded-lg border border-white/[0.1] text-xs space-y-1 shadow-xl">
+                          <p className="font-bold text-sky-300">Depth: {label} m</p>
                           {payload.map((item, idx) => (
                             <p key={idx} style={{ color: item.color }} className="font-mono">
                               {item.name}: {item.value} {item.name === "Temperature" ? "°C" : "PSU"}
@@ -412,33 +412,33 @@ export default function ArgoProfileDrawer({
                     type="linear"
                     dataKey="salinity"
                     name="Salinity"
-                    stroke="#00d2ff"
+                    stroke="#38bdf8"
                     strokeWidth={2}
                     dot={false}
-                    activeDot={{ r: 4, fill: "#00d2ff" }}
+                    activeDot={{ r: 4, fill: "#38bdf8" }}
                   />
                 )}
               </LineChart>
             </ResponsiveContainer>
           ) : (
             /* Mode 2: Exact Raw Data Table View */
-            <div className="w-full h-full overflow-y-auto rounded-lg border border-slate-800 bg-slate-950/80">
+            <div className="w-full h-full overflow-y-auto rounded-lg border border-white/[0.08] bg-slate-950/60">
               <table className="w-full text-left text-xs font-mono">
-                <thead className="sticky top-0 bg-slate-900/95 text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-800 z-10">
+                <thead className="sticky top-0 bg-slate-900/95 text-[10px] text-slate-400 uppercase tracking-wider border-b border-white/[0.08] z-10">
                   <tr>
                     <th className="py-2.5 px-3">Depth (m)</th>
                     <th className="py-2.5 px-3 text-rose-400">Temperature (°C)</th>
-                    <th className="py-2.5 px-3 text-cyan-400">Salinity (PSU)</th>
+                    <th className="py-2.5 px-3 text-sky-400">Salinity (PSU)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/40">
+                <tbody className="divide-y divide-white/[0.04]">
                   {chartData.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
+                    <tr key={idx} className="hover:bg-white/[0.04] transition-colors">
                       <td className="py-1.5 px-3 text-white font-semibold">{row.depth} m</td>
                       <td className="py-1.5 px-3 text-rose-300">
                         {row.temperature !== null ? `${row.temperature.toFixed(2)} °C` : "—"}
                       </td>
-                      <td className="py-1.5 px-3 text-cyan-300">
+                      <td className="py-1.5 px-3 text-sky-300">
                         {row.salinity !== null ? `${row.salinity.toFixed(2)} PSU` : "—"}
                       </td>
                     </tr>
@@ -451,14 +451,14 @@ export default function ArgoProfileDrawer({
       </div>
 
       {/* Footer Info & Verification Links */}
-      <div className="p-3 bg-slate-950/90 border-t border-cyan-500/20 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+      <div className="p-3 bg-slate-950/40 border-t border-white/[0.06] flex items-center justify-between text-[10px] text-slate-400 font-mono">
         <div className="flex items-center gap-2">
           <span>Ifremer GDAC · INCOIS Hub</span>
           <a
             href={`https://fleetmonitoring.euro-argo.eu/float/${selectedFloat.float_id}`}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-0.5 text-cyan-400 hover:text-cyan-300 underline underline-offset-2 ml-1"
+            className="flex items-center gap-0.5 text-sky-400 hover:text-sky-300 underline underline-offset-2 ml-1"
           >
             <span>Euro-Argo WMO Live</span>
             <ExternalLink className="w-2.5 h-2.5" />

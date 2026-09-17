@@ -472,11 +472,11 @@ export default function Globe({
                 name: `India EEZ 200 NM Limit Ring ${fIdx + 1}-${rIdx + 1}`,
                 polyline: {
                   positions,
-                  width: 3.5,
+                  width: 2.5,
                   clampToGround: true,
                   material: new Cesium.PolylineGlowMaterialProperty({
-                    glowPower: 0.28,
-                    color: Cesium.Color.fromCssColorString("#00f2a9"),
+                    glowPower: 0.15,
+                    color: Cesium.Color.fromCssColorString("#38bdf8").withAlpha(0.85),
                   }),
                 },
               });
@@ -1164,9 +1164,9 @@ export default function Globe({
 
   if (!isMounted) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-slate-950 text-cyan-400 font-mono text-sm">
+      <div className="w-full h-full flex items-center justify-center bg-slate-950 text-sky-400 font-mono text-sm">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
           <span>Initializing ATLANTIS 3D Cesium Engine...</span>
         </div>
       </div>
@@ -1179,8 +1179,8 @@ export default function Globe({
     <div className="relative w-full h-full">
       {/* Loading Spinner Badge */}
       {isUpdating && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3.5 py-1.5 rounded-full ocean-glass border border-cyan-400/50 text-cyan-300 text-xs font-medium shadow-lg shadow-cyan-950/60 animate-in fade-in duration-200">
-          <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3.5 py-1.5 rounded-full ocean-glass border border-white/[0.1] text-sky-300 text-xs font-medium shadow-xl backdrop-blur-xl animate-in fade-in duration-200">
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-400" />
           <span>
             {viewMode === "volumetric"
               ? "Synthesizing 3D Volumetric Water Column..."
@@ -1191,8 +1191,8 @@ export default function Globe({
 
       {/* Volumetric Active Badge */}
       {viewMode === "volumetric" && (
-        <div className="absolute top-20 left-8 z-30 hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg ocean-glass border border-emerald-400/40 text-emerald-300 text-xs font-semibold shadow-md">
-          <Layers className="w-3.5 h-3.5 text-emerald-400" />
+        <div className="absolute top-20 left-8 z-30 hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg ocean-glass border border-white/[0.08] text-slate-200 text-xs font-medium shadow-md">
+          <Layers className="w-3.5 h-3.5 text-sky-400" />
           <span>3D Water Column Mode Active ({verticalExaggeration}x Exaggeration)</span>
         </div>
       )}
@@ -1338,16 +1338,16 @@ export default function Globe({
         }`}
       >
         {/* Helper Hint Toast */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full ocean-glass border border-cyan-500/30 text-[11px] text-cyan-200 shadow-xl backdrop-blur-md">
-          <Compass className="w-3.5 h-3.5 text-cyan-400" />
+        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full ocean-glass border border-white/[0.08] text-[11px] text-slate-300 shadow-xl backdrop-blur-md">
+          <Compass className="w-3.5 h-3.5 text-sky-400" />
           <span>
             {mouseMode === "tilt" ? (
-              <span className="text-emerald-300 font-semibold">
+              <span className="text-sky-300 font-semibold">
                 🕹️ Left-Drag to Tilt 3D Angle · Wheel to Zoom
               </span>
             ) : (
               <span>
-                Left-Drag: Pan · <strong>Right-Drag / Ctrl+Drag: Tilt 3D</strong> · Wheel: Zoom
+                Left-Drag: Pan · <strong className="text-slate-200">Right-Drag / Ctrl+Drag: Tilt 3D</strong> · Wheel: Zoom
               </span>
             )}
           </span>
@@ -1357,19 +1357,19 @@ export default function Globe({
         {!isHudExpanded ? (
           <button
             onClick={() => setIsHudExpanded(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl ocean-glass border border-cyan-400/50 text-cyan-300 text-xs font-semibold shadow-xl hover:border-cyan-300 hover:text-white transition-all backdrop-blur-md"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl ocean-glass border border-white/[0.1] text-slate-200 text-xs font-semibold shadow-xl hover:border-white/[0.2] hover:text-white transition-all backdrop-blur-md"
           >
-            <Box className="w-4 h-4 text-emerald-400" />
+            <Box className="w-4 h-4 text-sky-400" />
             <span>3D Camera Controls</span>
             <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
           </button>
         ) : (
           /* Main 3D Camera Deck Panel */
-          <div className="ocean-glass rounded-2xl border border-cyan-500/40 p-3 shadow-2xl backdrop-blur-xl bg-slate-950/85 w-72 space-y-2.5">
+          <div className="ocean-glass rounded-2xl border border-white/[0.1] p-3 shadow-2xl backdrop-blur-2xl w-72 space-y-2.5">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-cyan-300 uppercase tracking-wider">
-                <Box className="w-4 h-4 text-emerald-400" />
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-2">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200 uppercase tracking-wider">
+                <Box className="w-4 h-4 text-sky-400" />
                 <span>3D Camera Deck</span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -1379,8 +1379,8 @@ export default function Globe({
                   title="Toggle Left-Click Drag Mode between 3D Tilt and Globe Pan"
                   className={`px-2 py-1 rounded-md text-[10px] font-mono font-bold flex items-center gap-1 transition-all ${
                     mouseMode === "tilt"
-                      ? "bg-emerald-500/25 text-emerald-300 border border-emerald-400/70 shadow-sm shadow-emerald-500/30"
-                      : "bg-slate-800/80 text-slate-400 border border-slate-700/60 hover:text-slate-200"
+                      ? "bg-sky-500/20 text-sky-300 border border-sky-400/40 shadow-sm"
+                      : "bg-white/[0.05] text-slate-400 border border-white/[0.08] hover:text-slate-200"
                   }`}
                 >
                   {mouseMode === "tilt" ? "🕹️ Left: Tilt 3D" : "🖱️ Left: Pan"}
@@ -1389,7 +1389,7 @@ export default function Globe({
                 {/* Minimize Button */}
                 <button
                   onClick={() => setIsHudExpanded(false)}
-                  className="p-1 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 transition-all"
+                  className="p-1 rounded-md text-slate-400 hover:text-slate-200 hover:bg-white/[0.08] transition-all"
                   title="Minimize Panel"
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
@@ -1401,15 +1401,15 @@ export default function Globe({
             <div className="space-y-1">
               <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold flex justify-between items-center">
                 <span>Basemap Imagery</span>
-                <span className="font-mono text-cyan-400 text-[9px] capitalize">{basemapStyle}</span>
+                <span className="font-mono text-sky-400 text-[9px] capitalize">{basemapStyle}</span>
               </div>
               <div className="grid grid-cols-3 gap-1 text-[10px]">
                 <button
                   onClick={() => setBasemapStyle("satellite")}
                   className={`px-1.5 py-1 rounded-md text-center transition-all border flex items-center justify-center gap-1 ${
                     basemapStyle === "satellite"
-                      ? "bg-cyan-950/90 border-cyan-400 text-cyan-200 font-semibold shadow-sm shadow-cyan-950"
-                      : "bg-slate-900/70 border-slate-800 text-slate-400 hover:text-slate-200"
+                      ? "ocean-glass-active text-white font-semibold shadow-sm"
+                      : "ocean-glass-interactive text-slate-400 hover:text-slate-200"
                   }`}
                 >
                   <span>🛰️</span>
@@ -1419,8 +1419,8 @@ export default function Globe({
                   onClick={() => setBasemapStyle("dark")}
                   className={`px-1.5 py-1 rounded-md text-center transition-all border flex items-center justify-center gap-1 ${
                     basemapStyle === "dark"
-                      ? "bg-cyan-950/90 border-cyan-400 text-cyan-200 font-semibold shadow-sm shadow-cyan-950"
-                      : "bg-slate-900/70 border-slate-800 text-slate-400 hover:text-slate-200"
+                      ? "ocean-glass-active text-white font-semibold shadow-sm"
+                      : "ocean-glass-interactive text-slate-400 hover:text-slate-200"
                   }`}
                 >
                   <span>🌌</span>
@@ -1430,8 +1430,8 @@ export default function Globe({
                   onClick={() => setBasemapStyle("ocean")}
                   className={`px-1.5 py-1 rounded-md text-center transition-all border flex items-center justify-center gap-1 ${
                     basemapStyle === "ocean"
-                      ? "bg-cyan-950/90 border-cyan-400 text-cyan-200 font-semibold shadow-sm shadow-cyan-950"
-                      : "bg-slate-900/70 border-slate-800 text-slate-400 hover:text-slate-200"
+                      ? "ocean-glass-active text-white font-semibold shadow-sm"
+                      : "ocean-glass-interactive text-slate-400 hover:text-slate-200"
                   }`}
                 >
                   <span>🌊</span>
@@ -1441,35 +1441,35 @@ export default function Globe({
             </div>
 
             {/* Quick 3D Perspectives */}
-            <div className="space-y-1 pt-1 border-t border-slate-800/80">
+            <div className="space-y-1 pt-1 border-t border-white/[0.06]">
               <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
                 Camera Angles
               </div>
               <div className="grid grid-cols-2 gap-1.5">
                 <button
                   onClick={() => flyToPreset("oblique")}
-                  className="px-2 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700/70 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 text-xs font-medium transition-all text-left flex items-center gap-1.5"
+                  className="px-2 py-1.5 rounded-lg ocean-glass-interactive text-slate-300 hover:text-white text-xs font-medium transition-all text-left flex items-center gap-1.5"
                 >
                   <span>💎</span>
                   <span>3D Oblique</span>
                 </button>
                 <button
                   onClick={() => flyToPreset("side")}
-                  className="px-2 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700/70 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 text-xs font-medium transition-all text-left flex items-center gap-1.5"
+                  className="px-2 py-1.5 rounded-lg ocean-glass-interactive text-slate-300 hover:text-white text-xs font-medium transition-all text-left flex items-center gap-1.5"
                 >
                   <span>🌊</span>
                   <span>Side Profile</span>
                 </button>
                 <button
                   onClick={() => flyToPreset("south")}
-                  className="px-2 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700/70 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 text-xs font-medium transition-all text-left flex items-center gap-1.5"
+                  className="px-2 py-1.5 rounded-lg ocean-glass-interactive text-slate-300 hover:text-white text-xs font-medium transition-all text-left flex items-center gap-1.5"
                 >
                   <span>🧭</span>
                   <span>South Front</span>
                 </button>
                 <button
                   onClick={() => flyToPreset("top")}
-                  className="px-2 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700/70 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 text-xs font-medium transition-all text-left flex items-center gap-1.5"
+                  className="px-2 py-1.5 rounded-lg ocean-glass-interactive text-slate-300 hover:text-white text-xs font-medium transition-all text-left flex items-center gap-1.5"
                 >
                   <span>🗺️</span>
                   <span>Top-Down</span>
@@ -1478,7 +1478,7 @@ export default function Globe({
             </div>
 
             {/* Direct Adjustment Arrows (Click to fine-tune angle) */}
-            <div className="space-y-1 pt-1 border-t border-slate-800/80">
+            <div className="space-y-1 pt-1 border-t border-white/[0.06]">
               <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold flex justify-between">
                 <span>Manual Tweak</span>
                 <span className="font-mono text-slate-400 text-[9px]">Fine Adjustment</span>
@@ -1488,9 +1488,9 @@ export default function Globe({
                 <button
                   onClick={() => adjustTilt(6)}
                   title="Tilt Pitch Up (view from lower angle)"
-                  className="p-1.5 rounded-lg bg-slate-900 hover:bg-cyan-950/60 border border-slate-800 hover:border-cyan-400/60 text-slate-300 hover:text-cyan-300 text-xs font-mono flex flex-col items-center gap-0.5 transition-all"
+                  className="p-1.5 rounded-lg ocean-glass-interactive text-slate-300 hover:text-white text-xs font-mono flex flex-col items-center gap-0.5 transition-all"
                 >
-                  <ArrowUp className="w-3.5 h-3.5 text-cyan-400" />
+                  <ArrowUp className="w-3.5 h-3.5 text-sky-400" />
                   <span className="text-[9px]">Tilt Up</span>
                 </button>
 
@@ -1498,9 +1498,9 @@ export default function Globe({
                 <button
                   onClick={() => adjustRotate(-15)}
                   title="Orbit Left (-15°)"
-                  className="p-1.5 rounded-lg bg-slate-900 hover:bg-cyan-950/60 border border-slate-800 hover:border-cyan-400/60 text-slate-300 hover:text-cyan-300 text-xs font-mono flex flex-col items-center gap-0.5 transition-all"
+                  className="p-1.5 rounded-lg ocean-glass-interactive text-slate-300 hover:text-white text-xs font-mono flex flex-col items-center gap-0.5 transition-all"
                 >
-                  <RotateCcw className="w-3.5 h-3.5 text-teal-400" />
+                  <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
                   <span className="text-[9px]">Orbit L</span>
                 </button>
 
@@ -1508,9 +1508,9 @@ export default function Globe({
                 <button
                   onClick={() => adjustRotate(15)}
                   title="Orbit Right (+15°)"
-                  className="p-1.5 rounded-lg bg-slate-900 hover:bg-cyan-950/60 border border-slate-800 hover:border-cyan-400/60 text-slate-300 hover:text-cyan-300 text-xs font-mono flex flex-col items-center gap-0.5 transition-all"
+                  className="p-1.5 rounded-lg ocean-glass-interactive text-slate-300 hover:text-white text-xs font-mono flex flex-col items-center gap-0.5 transition-all"
                 >
-                  <RotateCw className="w-3.5 h-3.5 text-teal-400" />
+                  <RotateCw className="w-3.5 h-3.5 text-slate-400" />
                   <span className="text-[9px]">Orbit R</span>
                 </button>
 
@@ -1518,9 +1518,9 @@ export default function Globe({
                 <button
                   onClick={() => adjustTilt(-6)}
                   title="Tilt Pitch Down (view from higher angle)"
-                  className="p-1.5 rounded-lg bg-slate-900 hover:bg-cyan-950/60 border border-slate-800 hover:border-cyan-400/60 text-slate-300 hover:text-cyan-300 text-xs font-mono flex flex-col items-center gap-0.5 transition-all"
+                  className="p-1.5 rounded-lg ocean-glass-interactive text-slate-300 hover:text-white text-xs font-mono flex flex-col items-center gap-0.5 transition-all"
                 >
-                  <ArrowDown className="w-3.5 h-3.5 text-cyan-400" />
+                  <ArrowDown className="w-3.5 h-3.5 text-sky-400" />
                   <span className="text-[9px]">Tilt Dn</span>
                 </button>
 
@@ -1528,9 +1528,9 @@ export default function Globe({
                 <button
                   onClick={() => adjustZoom("in")}
                   title="Zoom In"
-                  className="p-1.5 rounded-lg bg-slate-900 hover:bg-cyan-950/60 border border-slate-800 hover:border-cyan-400/60 text-slate-300 hover:text-cyan-300 text-xs font-mono flex flex-col items-center gap-0.5 transition-all"
+                  className="p-1.5 rounded-lg ocean-glass-interactive text-slate-300 hover:text-white text-xs font-mono flex flex-col items-center gap-0.5 transition-all"
                 >
-                  <ZoomIn className="w-3.5 h-3.5 text-emerald-400" />
+                  <ZoomIn className="w-3.5 h-3.5 text-slate-400" />
                   <span className="text-[9px]">Zoom In</span>
                 </button>
 
@@ -1538,9 +1538,9 @@ export default function Globe({
                 <button
                   onClick={() => adjustZoom("out")}
                   title="Zoom Out"
-                  className="p-1.5 rounded-lg bg-slate-900 hover:bg-cyan-950/60 border border-slate-800 hover:border-cyan-400/60 text-slate-300 hover:text-cyan-300 text-xs font-mono flex flex-col items-center gap-0.5 transition-all"
+                  className="p-1.5 rounded-lg ocean-glass-interactive text-slate-300 hover:text-white text-xs font-mono flex flex-col items-center gap-0.5 transition-all"
                 >
-                  <ZoomOut className="w-3.5 h-3.5 text-emerald-400" />
+                  <ZoomOut className="w-3.5 h-3.5 text-slate-400" />
                   <span className="text-[9px]">Zoom Out</span>
                 </button>
               </div>
@@ -1548,7 +1548,7 @@ export default function Globe({
 
             {/* Volumetric Layer Filtering & Opacity (Active only in 3D Volumetric Mode) */}
             {viewMode === "volumetric" && (
-              <div className="space-y-1.5 pt-1 border-t border-slate-800/80">
+              <div className="space-y-1.5 pt-1 border-t border-white/[0.06]">
                 <div className="flex items-center justify-between text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
                   <span>Layer Isolator</span>
                   <span className="text-slate-400 font-mono text-[9px]">Toggle Depth</span>
@@ -1557,7 +1557,7 @@ export default function Globe({
                   {[
                     { id: 0, label: "0.5m Surface", color: "text-amber-300" },
                     { id: 1, label: "50m Mixed", color: "text-emerald-300" },
-                    { id: 2, label: "200m Thermo", color: "text-cyan-300" },
+                    { id: 2, label: "200m Thermo", color: "text-sky-300" },
                     { id: 3, label: "1000m Abyss", color: "text-blue-300" },
                   ].map((l) => (
                     <button
@@ -1568,10 +1568,10 @@ export default function Globe({
                           [l.id]: !prev[l.id],
                         }))
                       }
-                      className={`px-2 py-1 rounded border flex items-center justify-between transition-all ${
+                      className={`px-2 py-1 rounded transition-all ${
                         visibleLayers[l.id]
-                          ? "bg-slate-900/90 border-cyan-500/40 text-slate-200"
-                          : "bg-slate-950/60 border-slate-800 text-slate-500 line-through"
+                          ? "ocean-glass-active text-slate-100 font-medium"
+                          : "bg-slate-950/40 border border-white/[0.04] text-slate-500 line-through"
                       }`}
                     >
                       <span className={visibleLayers[l.id] ? l.color : ""}>{l.label}</span>

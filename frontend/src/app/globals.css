@@ -2,15 +2,15 @@
 @import "cesium/Build/Cesium/Widgets/widgets.css";
 
 :root {
-  --ocean-depth-dark: #030d1a;
-  --ocean-navy: #07192e;
-  --ocean-surface: #0a2540;
-  --ocean-teal: #0d405e;
-  --ocean-cyan: #00d2ff;
-  --ocean-emerald: #00f2a9;
-  --ocean-accent: #38ef7d;
-  --glass-bg: rgba(7, 25, 46, 0.82);
-  --glass-border: rgba(0, 210, 255, 0.22);
+  --ocean-depth-dark: #040812;
+  --ocean-navy: #080f1e;
+  --ocean-surface: #0e1726;
+  --sky-accent: #38bdf8;
+  --sky-glow: rgba(56, 189, 248, 0.18);
+  --glass-bg: rgba(9, 15, 28, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-subtle: rgba(255, 255, 255, 0.05);
+  --glass-highlight: rgba(255, 255, 255, 0.12);
 }
 
 body {
@@ -21,18 +21,45 @@ body {
   user-select: none;
 }
 
-/* Glassmorphic Panel Styling */
+/* ── Luxury Glassmorphic Panel Styling ─────────────────────────────────────── */
 .ocean-glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
   border: 1px solid var(--glass-border);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  box-shadow: 
+    inset 0 1px 0 0 var(--glass-highlight),
+    0 16px 40px -12px rgba(0, 0, 0, 0.7),
+    0 2px 6px 0 rgba(0, 0, 0, 0.4);
 }
 
 .ocean-glass-subtle {
-  background: rgba(13, 64, 94, 0.35);
-  border: 1px solid rgba(0, 210, 255, 0.15);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border-subtle);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+.ocean-glass-interactive {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ocean-glass-interactive:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.ocean-glass-active {
+  background: rgba(56, 189, 248, 0.09) !important;
+  border-color: rgba(56, 189, 248, 0.35) !important;
+  box-shadow: 
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.18),
+    0 0 20px -3px rgba(56, 189, 248, 0.2) !important;
 }
 
 /* Cesium Viewer Customization */
@@ -50,26 +77,26 @@ body {
   display: none !important;
 }
 
-/* Custom Scrollbar */
+/* Custom Sleek Glass Scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(3, 13, 26, 0.5);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 210, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 210, 255, 0.6);
+  background: rgba(56, 189, 248, 0.35);
 }
 
 /* Range input styling */
 input[type="range"] {
-  accent-color: #00d2ff;
+  accent-color: #38bdf8;
 }

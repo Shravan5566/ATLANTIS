@@ -125,12 +125,12 @@ export default function Colorbar({
   });
 
   return (
-    <div className="fixed top-20 right-4 z-40 ocean-glass rounded-xl p-3 border border-cyan-500/20 shadow-2xl max-w-xs w-76 sm:w-80 transition-all duration-200">
+    <div className="fixed top-20 right-4 z-40 ocean-glass rounded-2xl p-3.5 shadow-2xl max-w-xs w-76 sm:w-80 transition-all duration-200">
       {/* Header */}
       <div className="flex items-center justify-between text-xs mb-2">
         <div className="flex items-center gap-1.5 font-semibold text-slate-200">
           <span>{meta.display_name}</span>
-          <span className="font-mono text-cyan-300 font-bold text-[10px] px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30">
+          <span className="font-mono text-sky-300 font-bold text-[10px] px-1.5 py-0.5 rounded bg-sky-500/10 border border-sky-400/25 shadow-sm">
             {meta.units}
           </span>
         </div>
@@ -138,10 +138,10 @@ export default function Colorbar({
         <button
           onClick={() => setIsOpen(!isOpen)}
           title="Customize Colorbar Scale & Palette"
-          className={`p-1.5 rounded-lg border transition-all flex items-center gap-1 text-[11px] ${
+          className={`p-1.5 rounded-lg transition-all flex items-center gap-1 text-[11px] ${
             isOpen
-              ? "bg-cyan-500/20 border-cyan-400 text-cyan-300"
-              : "bg-slate-900/60 border-slate-700 text-slate-400 hover:text-slate-200"
+              ? "ocean-glass-active text-sky-300"
+              : "ocean-glass-interactive text-slate-400 hover:text-slate-200"
           }`}
         >
           <Settings className="w-3.5 h-3.5" />
@@ -151,13 +151,13 @@ export default function Colorbar({
 
       {/* Main Gradient Bar */}
       <div
-        className={`h-3.5 w-full rounded-md shadow-inner border border-black/40 bg-gradient-to-r ${activePal.gradient}`}
+        className={`h-3 w-full rounded-md shadow-inner border border-white/[0.1] bg-gradient-to-r ${activePal.gradient}`}
       />
 
       {/* Tick Values */}
       <div className="flex justify-between text-[10px] text-slate-300 font-mono mt-1">
         {ticks.map((t, idx) => (
-          <span key={idx} className={idx === 0 || idx === ticks.length - 1 ? "font-bold text-cyan-300" : ""}>
+          <span key={idx} className={idx === 0 || idx === ticks.length - 1 ? "font-bold text-sky-300" : ""}>
             {t}
           </span>
         ))}
@@ -165,11 +165,11 @@ export default function Colorbar({
 
       {/* Interactive Editor Drawer (Collapsible) */}
       {isOpen && (
-        <div className="mt-3 pt-3 border-t border-slate-800/80 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200 text-xs">
+        <div className="mt-3 pt-3 border-t border-white/[0.08] space-y-3 animate-in fade-in slide-in-from-top-1 duration-200 text-xs">
           {/* 1. Palette Selector */}
           <div>
             <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-              <Palette className="w-3 h-3 text-cyan-400" />
+              <Palette className="w-3 h-3 text-sky-400" />
               <span>Scientific Color Palette</span>
             </div>
             <div className="grid grid-cols-2 gap-1.5">
@@ -177,10 +177,10 @@ export default function Colorbar({
                 <button
                   key={pal.id}
                   onClick={() => handlePaletteSelect(pal.id)}
-                  className={`flex items-center gap-2 p-1.5 rounded-lg border text-[11px] font-medium transition-all ${
+                  className={`flex items-center gap-2 p-1.5 rounded-lg text-[11px] font-medium transition-all ${
                     config.palette === pal.id
-                      ? "bg-cyan-950/80 border-cyan-400 text-white shadow-sm ring-1 ring-cyan-400/40"
-                      : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
+                      ? "ocean-glass-active text-white"
+                      : "ocean-glass-interactive text-slate-400 hover:text-slate-200"
                   }`}
                 >
                   <div className={`w-3.5 h-3.5 rounded-full bg-gradient-to-r ${pal.gradient} shrink-0`} />
@@ -193,26 +193,26 @@ export default function Colorbar({
           {/* 2. Scale Type: Linear vs Log */}
           <div>
             <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-              <Scale className="w-3 h-3 text-teal-400" />
+              <Scale className="w-3 h-3 text-sky-400" />
               <span>Normalization Scale</span>
             </div>
             <div className="grid grid-cols-2 gap-1.5">
               <button
                 onClick={() => handleScaleToggle("linear")}
-                className={`py-1 px-2 rounded-lg border text-[11px] font-semibold transition-all ${
+                className={`py-1 px-2 rounded-lg text-[11px] font-semibold transition-all ${
                   config.scaleType === "linear"
-                    ? "bg-teal-950/80 border-teal-400 text-white shadow-sm"
-                    : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
+                    ? "ocean-glass-active text-white"
+                    : "ocean-glass-interactive text-slate-400 hover:text-slate-200"
                 }`}
               >
                 Linear Scale
               </button>
               <button
                 onClick={() => handleScaleToggle("log")}
-                className={`py-1 px-2 rounded-lg border text-[11px] font-semibold transition-all ${
+                className={`py-1 px-2 rounded-lg text-[11px] font-semibold transition-all ${
                   config.scaleType === "log"
-                    ? "bg-teal-950/80 border-teal-400 text-white shadow-sm"
-                    : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
+                    ? "ocean-glass-active text-white"
+                    : "ocean-glass-interactive text-slate-400 hover:text-slate-200"
                 }`}
               >
                 Logarithmic (log1p)
@@ -229,15 +229,15 @@ export default function Colorbar({
               <button
                 onClick={handleResetToSlice}
                 disabled={!sliceRange}
-                className="flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-900/80 text-[10px] font-medium transition-all disabled:opacity-50"
+                className="flex items-center justify-center gap-1 py-1 px-2 rounded-lg ocean-glass-interactive text-sky-300 hover:text-white text-[10px] font-medium transition-all disabled:opacity-50"
                 title="Calibrate color range to active depth layer"
               >
-                <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
+                <Sparkles className="w-2.5 h-2.5 text-sky-400" />
                 <span>Auto: Active Layer</span>
               </button>
               <button
                 onClick={handleResetToGlobal}
-                className="flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 text-[10px] font-medium transition-all"
+                className="flex items-center justify-center gap-1 py-1 px-2 rounded-lg ocean-glass-interactive text-slate-300 hover:text-white text-[10px] font-medium transition-all"
                 title="Use full column 3D volume range"
               >
                 <RotateCcw className="w-2.5 h-2.5 text-slate-400" />
@@ -253,7 +253,7 @@ export default function Colorbar({
                   step={0.5}
                   value={config.min}
                   onChange={(e) => handleMinChange(parseFloat(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
+                  className="w-full bg-slate-900/80 border border-white/[0.1] rounded-lg px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-sky-400/50"
                 />
               </div>
               <div>
@@ -263,7 +263,7 @@ export default function Colorbar({
                   step={0.5}
                   value={config.max}
                   onChange={(e) => handleMaxChange(parseFloat(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
+                  className="w-full bg-slate-900/80 border border-white/[0.1] rounded-lg px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-sky-400/50"
                 />
               </div>
             </div>

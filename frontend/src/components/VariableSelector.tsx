@@ -28,7 +28,7 @@ export default function VariableSelector({
       case "thetao":
         return <Thermometer className="w-4 h-4 text-rose-400" />;
       case "so":
-        return <Droplets className="w-4 h-4 text-cyan-400" />;
+        return <Droplets className="w-4 h-4 text-sky-400" />;
       case "cur_speed":
       case "uo":
       case "vo":
@@ -40,9 +40,9 @@ export default function VariableSelector({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between text-xs text-slate-300 font-semibold tracking-wide uppercase">
+      <div className="flex items-center justify-between text-xs text-slate-400 font-semibold tracking-wide uppercase">
         <span>Ocean Field Parameter</span>
-        {isLoading && <span className="text-cyan-400 text-[10px] animate-pulse">Syncing...</span>}
+        {isLoading && <span className="text-sky-400 text-[10px] animate-pulse">Syncing...</span>}
       </div>
 
       <div className="grid grid-cols-1 gap-2">
@@ -52,14 +52,14 @@ export default function VariableSelector({
             <button
               key={key}
               onClick={() => onSelectVariable(key)}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left text-xs font-medium transition-all duration-200 border ${
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left text-xs font-medium transition-all duration-200 ${
                 isSelected
-                  ? "bg-gradient-to-r from-cyan-950/90 to-teal-900/60 border-cyan-400 text-white shadow-md shadow-cyan-900/40 ring-1 ring-cyan-400/40"
-                  : "bg-slate-900/60 hover:bg-slate-800/80 border-slate-700/60 text-slate-300 hover:text-white"
+                  ? "ocean-glass-active text-white"
+                  : "ocean-glass-interactive text-slate-300 hover:text-white"
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-slate-950/60 border border-slate-700/40">
+                <div className="p-1.5 rounded-lg bg-slate-900/70 border border-white/[0.08]">
                   {getIcon(key)}
                 </div>
                 <div>
@@ -69,7 +69,11 @@ export default function VariableSelector({
               </div>
 
               <div className="text-right">
-                <span className="inline-block px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-slate-950/80 text-cyan-300 border border-cyan-500/20">
+                <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-mono font-bold ${
+                  isSelected 
+                    ? "bg-sky-500/15 text-sky-300 border border-sky-400/30" 
+                    : "bg-white/[0.04] text-slate-300 border border-white/[0.06]"
+                }`}>
                   {meta.units}
                 </span>
               </div>

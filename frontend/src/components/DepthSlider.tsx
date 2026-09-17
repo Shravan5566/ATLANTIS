@@ -21,20 +21,20 @@ export default function DepthSlider({ depthLevels, depthIndex, onDepthChange }: 
   };
 
   return (
-    <div className="space-y-2.5 p-3.5 rounded-xl ocean-glass-subtle border border-cyan-500/20">
+    <div className="space-y-2.5 p-3.5 rounded-xl ocean-glass-subtle">
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1.5 text-slate-300 font-semibold uppercase tracking-wider text-[11px]">
-          <Layers className="w-3.5 h-3.5 text-cyan-400" />
+          <Layers className="w-3.5 h-3.5 text-sky-400" />
           <span>Water Column Depth</span>
         </div>
-        <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-950/90 border border-cyan-400/40 text-cyan-300 font-mono font-bold text-xs">
-          <ArrowDown className="w-3 h-3 text-cyan-400" />
+        <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500/10 border border-sky-400/25 text-sky-300 font-mono font-bold text-xs shadow-sm">
+          <ArrowDown className="w-3 h-3 text-sky-400" />
           <span>{currentDepth} m</span>
         </div>
       </div>
 
       <div className="text-[11px] text-slate-400 italic">
-        Layer: <span className="text-teal-300 font-medium">{getDepthLabel(currentDepth)}</span>
+        Layer: <span className="text-sky-300/90 font-medium not-italic">{getDepthLabel(currentDepth)}</span>
       </div>
 
       {/* Slider */}
@@ -46,7 +46,7 @@ export default function DepthSlider({ depthLevels, depthIndex, onDepthChange }: 
           step={1}
           value={depthIndex}
           onChange={(e) => onDepthChange(parseInt(e.target.value, 10))}
-          className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+          className="w-full h-1.5 bg-slate-800/90 rounded-lg appearance-none cursor-pointer accent-sky-400"
         />
 
         <div className="flex justify-between text-[10px] text-slate-400 font-mono mt-1">
