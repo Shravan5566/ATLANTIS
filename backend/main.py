@@ -260,7 +260,7 @@ async def add_security_and_cache_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
     response.headers["X-XSS-Protection"] = "1; mode=block"
-    # CSP: permissive enough for Next.js SSG and CesiumJS (WebGL, workers, blob URLs, data URIs, inline scripts)
+    # CSP: permissive enough for Next.js SSG and CesiumJS (WebGL, workers, blob URLs, data URIs, inline scripts, map tiles)
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob:; "
@@ -269,8 +269,7 @@ async def add_security_and_cache_headers(request: Request, call_next):
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com data:; "
         "img-src 'self' data: blob: https:; "
-        "connect-src 'self' https://api.cesium.com https://assets.cesium.com "
-        "https://ion.cesium.com https://tiles.cesium.com https://*.cesium.com; "
+        "connect-src 'self' https: data: blob: https://*.cesium.com https://*.arcgisonline.com https://*.cartocdn.com; "
         "frame-ancestors 'none';"
     )
 

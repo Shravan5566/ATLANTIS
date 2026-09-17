@@ -128,6 +128,10 @@ export default function Globe({
   const activeLayerRef = useRef<Cesium.ImageryLayer | null>(null);
   const fadeAnimationRef = useRef<number | null>(null);
 
+  // Basemap tracking (Satellite photorealistic, Dark cyberpunk, Ocean bathymetric)
+  const [basemapStyle, setBasemapStyle] = useState<"satellite" | "dark" | "ocean">("satellite");
+  const baseLayerRef = useRef<Cesium.ImageryLayer | null>(null);
+
   // Volumetric entities tracking in Cesium scene
   const volumetricEntitiesRef = useRef<Cesium.Entity[]>([]);
 
@@ -143,6 +147,47 @@ export default function Globe({
 
   // Track current-vector arrow entities for cleanup
   const arrowEntitiesRef = useRef<Cesium.Entity[]>([]);
+
+  // Apply basemap style dynamically at index 0 (underneath ocean data layers)
+  const applyBasemap = useCallback(
+    (viewer: Cesium.Viewer, style: "satellite" | "dark" | "ocean") => {
+      if (!viewer || viewer.isDestroyed?.() || !viewer.imageryLayers) return;
+
+      if (baseLayerRef.current && viewer.imageryLayers.contains(baseLayerRef.current)) {
+        viewer.imageryLayers.remove(baseLayerRef.current, true);
+        baseLayerRef.current = null;
+      }
+
+      let provider: Cesium.ImageryProvider;
+      if (style === "satellite") {
+        provider = new Cesium.UrlTemplateImageryProvider({
+          url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          maximumLevel: 19,
+          credit: "© Esri, Maxar, Earthstar Geographics",
+        });
+      } else if (style === "dark") {
+        provider = new Cesium.UrlTemplateImageryProvider({
+          url: "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+          maximumLevel: 16,
+          credit: "© Esri, HERE, Garmin, © OpenStreetMap",
+        });
+      } else {
+        provider = new Cesium.UrlTemplateImageryProvider({
+          url: "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
+          maximumLevel: 16,
+          credit: "© Esri, GEBCO, NOAA, National Geographic",
+        });
+      }
+
+      try {
+        const layer = viewer.imageryLayers.addImageryProvider(provider, 0);
+        baseLayerRef.current = layer;
+      } catch (err) {
+        console.warn("Could not load basemap provider:", err);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     setIsMounted(true);
@@ -400,6 +445,9 @@ export default function Globe({
     viewer.scene.globe.translucency.frontFaceAlpha = 0.55;
     viewer.scene.globe.translucency.backFaceAlpha = 0.35;
 
+    // Initialize resilient Earth basemap at index 0 (Satellite / Dark / Ocean)
+    applyBasemap(viewer, basemapStyle);
+
     // Load Authentic India EEZ GeoJSON (Flanders Marine Institute / VLIZ v12)
     fetch("/india_eez.geojson")
       .then((res) => res.json())
@@ -484,7 +532,14 @@ export default function Globe({
       .catch((err) => {
         console.warn("Could not load /india_12nm.geojson:", err);
       });
-  }, []);
+  }, [applyBasemap, basemapStyle]);
+
+  // Dynamically update basemap when user toggles style
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed?.()) return;
+    applyBasemap(viewer, basemapStyle);
+  }, [basemapStyle, applyBasemap]);
 
   // Dynamically toggle globe translucency and unlock 3D camera controls for volumetric mode
   useEffect(() => {
@@ -798,9 +853,6 @@ export default function Globe({
             transparent: true,
             color: Cesium.Color.WHITE.withAlpha(sliceOpacity),
           }),
-          outline: true,
-          outlineColor: Cesium.Color.CYAN.withAlpha(0.85),
-          outlineWidth: 2.5,
         },
       });
       createdEntities.push(sliceEntity);
@@ -1155,6 +1207,8 @@ export default function Globe({
         animation={false}
         timeline={false}
         baseLayerPicker={false}
+        baseLayer={false}
+        showRenderLoopErrors={false}
         geocoder={false}
         homeButton={false}
         infoBox={false}
@@ -1343,8 +1397,51 @@ export default function Globe({
               </div>
             </div>
 
-            {/* Quick 3D Perspectives */}
+            {/* Basemap Imagery Mode */}
             <div className="space-y-1">
+              <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold flex justify-between items-center">
+                <span>Basemap Imagery</span>
+                <span className="font-mono text-cyan-400 text-[9px] capitalize">{basemapStyle}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1 text-[10px]">
+                <button
+                  onClick={() => setBasemapStyle("satellite")}
+                  className={`px-1.5 py-1 rounded-md text-center transition-all border flex items-center justify-center gap-1 ${
+                    basemapStyle === "satellite"
+                      ? "bg-cyan-950/90 border-cyan-400 text-cyan-200 font-semibold shadow-sm shadow-cyan-950"
+                      : "bg-slate-900/70 border-slate-800 text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <span>🛰️</span>
+                  <span>Satellite</span>
+                </button>
+                <button
+                  onClick={() => setBasemapStyle("dark")}
+                  className={`px-1.5 py-1 rounded-md text-center transition-all border flex items-center justify-center gap-1 ${
+                    basemapStyle === "dark"
+                      ? "bg-cyan-950/90 border-cyan-400 text-cyan-200 font-semibold shadow-sm shadow-cyan-950"
+                      : "bg-slate-900/70 border-slate-800 text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <span>🌌</span>
+                  <span>Dark</span>
+                </button>
+                <button
+                  onClick={() => setBasemapStyle("ocean")}
+                  className={`px-1.5 py-1 rounded-md text-center transition-all border flex items-center justify-center gap-1 ${
+                    basemapStyle === "ocean"
+                      ? "bg-cyan-950/90 border-cyan-400 text-cyan-200 font-semibold shadow-sm shadow-cyan-950"
+                      : "bg-slate-900/70 border-slate-800 text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <span>🌊</span>
+                  <span>Ocean</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick 3D Perspectives */}
+            <div className="space-y-1 pt-1 border-t border-slate-800/80">
               <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
                 Camera Angles
               </div>

@@ -56,13 +56,7 @@ export default function GlobeWrapper(props: GlobeWrapperProps) {
             return attemptLoad(attempt + 1);
           }
         } else if (isChunkError) {
-          // All retries exhausted — stale deployment detected, force reload
-          console.warn("Stale chunk detected after retries. Reloading page to fetch fresh assets...");
-          if (typeof window !== "undefined") {
-            // Use cache-busting reload to bypass browser/CDN cache
-            window.location.reload();
-            return;
-          }
+          console.warn("Could not load 3D globe module after retries.");
         }
 
         if (!cancelled) {
