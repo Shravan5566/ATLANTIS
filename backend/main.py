@@ -260,16 +260,17 @@ async def add_security_and_cache_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
     response.headers["X-XSS-Protection"] = "1; mode=block"
-    # CSP: permissive enough for CesiumJS (WebGL, workers, blob URLs, data URIs)
+    # CSP: permissive enough for Next.js SSG and CesiumJS (WebGL, workers, blob URLs, data URIs, inline scripts)
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-eval' blob:; "
+        "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob:; "
         "worker-src blob: 'self'; "
+        "child-src blob: 'self'; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com data:; "
         "img-src 'self' data: blob: https:; "
         "connect-src 'self' https://api.cesium.com https://assets.cesium.com "
-        "https://ion.cesium.com https://tiles.cesium.com; "
+        "https://ion.cesium.com https://tiles.cesium.com https://*.cesium.com; "
         "frame-ancestors 'none';"
     )
 
@@ -591,9 +592,7 @@ async def get_glider_tracks(request: Request):
     return load_glider_tracks()
 
 
-# ---------------------------------------------------------------------------
-# Frontend Static Mount (All-in-One Unified Production Mode)
-# ---------------------------------------------------------------------------
+# Frontend Static Mount (Unified Production Mode)
 FRONTEND_STATIC_DIR = PROJECT_ROOT / "frontend" / "out"
 if not FRONTEND_STATIC_DIR.exists():
     FRONTEND_STATIC_DIR = BACKEND_DIR / "static"

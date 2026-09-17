@@ -35,7 +35,8 @@ WORKDIR /app/backend
 # Environment configuration (Render sets $PORT=10000 dynamically)
 ENV PORT=10000 \
     HOST=0.0.0.0 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    ENVIRONMENT=production
 
 EXPOSE 7860 8000 10000
 
