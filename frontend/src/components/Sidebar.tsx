@@ -75,6 +75,7 @@ export default function Sidebar({
     >
       {/* Edge Slide Toggle Handle — Attached directly so it slides seamlessly in 100% sync */}
       <button
+        id="btn-sidebar-toggle"
         onClick={onToggle || onClose}
         title={isOpen ? "Hide Ocean Controls" : "Show Ocean Controls"}
         aria-label="Toggle Ocean Controls Sidebar"
@@ -107,7 +108,8 @@ export default function Sidebar({
               alt="ATLANTIS"
               width={20}
               height={18}
-              className="w-4.5 h-auto object-contain drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
+              style={{ width: "auto", height: "auto" }}
+              className="h-4.5 w-auto object-contain drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
             />
           </div>
           <span>Ocean Controls</span>
@@ -141,6 +143,7 @@ export default function Sidebar({
 
           <div className="grid grid-cols-2 gap-2">
             <button
+              id="btn-mode-single"
               onClick={() => onViewModeChange("single")}
               className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-semibold transition-all ${
                 viewMode === "single"
@@ -153,6 +156,7 @@ export default function Sidebar({
             </button>
 
             <button
+              id="btn-mode-volumetric"
               onClick={() => {
                 onViewModeChange("volumetric");
                 // Center camera on the 3D ocean water column with an isometric perspective tilt
@@ -335,7 +339,8 @@ export default function Sidebar({
           alt="ATLANTIS"
           width={14}
           height={13}
-          className="w-3.5 h-auto object-contain opacity-60"
+          style={{ width: "auto", height: "auto" }}
+          className="h-3.5 w-auto object-contain opacity-60"
         />
         <span>INCOIS Numerical Model · 0.083° Grid</span>
       </div>

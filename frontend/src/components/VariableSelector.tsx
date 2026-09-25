@@ -50,6 +50,7 @@ export default function VariableSelector({
           const isSelected = selectedVariable === key;
           return (
             <button
+              id={`btn-var-${key}`}
               key={key}
               onClick={() => onSelectVariable(key)}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left text-xs font-medium transition-all duration-200 ${

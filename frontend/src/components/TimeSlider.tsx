@@ -58,6 +58,7 @@ export default function TimeSlider({ timesteps, timeIndex, onTimeChange }: TimeS
       {/* Play Controls & Slider */}
       <div className="flex items-center gap-2 pt-1">
         <button
+          id="btn-time-play"
           onClick={() => setIsPlaying(!isPlaying)}
           aria-label={isPlaying ? "Pause Animation" : "Play Animation"}
           className={`p-2 rounded-lg transition-all border ${
@@ -70,14 +71,18 @@ export default function TimeSlider({ timesteps, timeIndex, onTimeChange }: TimeS
         </button>
 
         <button
+          id="btn-time-prev"
           onClick={handlePrev}
           title="Previous Step"
+          aria-label="Previous Step"
           className="p-1.5 rounded-lg ocean-glass-interactive text-slate-300 hover:text-white"
         >
           <SkipBack className="w-3.5 h-3.5" />
         </button>
 
         <input
+          id="slider-time"
+          aria-label="Observation Timestep"
           type="range"
           min={0}
           max={Math.max(0, totalSteps - 1)}
@@ -91,8 +96,10 @@ export default function TimeSlider({ timesteps, timeIndex, onTimeChange }: TimeS
         />
 
         <button
+          id="btn-time-next"
           onClick={handleNext}
           title="Next Step"
+          aria-label="Next Step"
           className="p-1.5 rounded-lg ocean-glass-interactive text-slate-300 hover:text-white"
         >
           <SkipForward className="w-3.5 h-3.5" />

@@ -40,6 +40,8 @@ export default function DepthSlider({ depthLevels, depthIndex, onDepthChange }: 
       {/* Slider */}
       <div className="relative pt-1">
         <input
+          id="slider-depth"
+          aria-label="Water Column Depth"
           type="range"
           min={0}
           max={Math.max(0, depthLevels.length - 1)}

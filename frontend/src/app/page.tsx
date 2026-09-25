@@ -107,6 +107,7 @@ export default function Home() {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans">
+      <h1 className="sr-only">ATLANTIS — 3D India EEZ Ocean Visualization Platform</h1>
       {/* 1. Top Oceanic Navbar */}
       <Navbar
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
@@ -180,6 +181,7 @@ export default function Home() {
 
       {/* ── RIGHT EDGE SLIDE TAB ─────────────────────────────────────── */}
       <button
+        id="btn-right-panel-toggle"
         onClick={() => setRightPanelOpen((o) => !o)}
         title={rightPanelOpen ? "Hide right panels" : "Show right panels"}
         aria-label="Toggle right panel"
