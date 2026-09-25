@@ -52,3 +52,11 @@ data-pipeline/raw/*.csv
 .DS_Store
 Thumbs.db
 *.log
+
+# Internal notes & playbooks
+.internal/
+*playbook*.md
+*Playbook*.md
+AGENTS.md
+CLAUDE.md
+
