@@ -197,47 +197,47 @@
     1000.0
   ],
   "timesteps": [
-    "2026-08-31T00:00:00Z",
-    "2026-09-01T00:00:00Z",
-    "2026-09-02T00:00:00Z",
-    "2026-09-03T00:00:00Z",
-    "2026-09-04T00:00:00Z"
+    "2026-09-21T00:00:00Z",
+    "2026-09-22T00:00:00Z",
+    "2026-09-23T00:00:00Z",
+    "2026-09-24T00:00:00Z",
+    "2026-09-25T00:00:00Z"
   ],
   "variables": {
     "thetao": {
       "display_name": "Sea Water Temperature",
       "units": "\u00b0C",
       "palette": "thermal",
-      "min": 4.25,
-      "max": 30.03
+      "min": 4.46,
+      "max": 30.09
     },
     "so": {
       "display_name": "Sea Water Salinity",
       "units": "PSU",
       "palette": "haline",
-      "min": 34.65,
-      "max": 36.16
+      "min": 33.86,
+      "max": 36.69
     },
     "uo": {
       "display_name": "Eastward Current Velocity",
       "units": "m/s",
       "palette": "coolwarm",
-      "min": -0.38,
-      "max": 0.38
+      "min": -0.3,
+      "max": 0.34
     },
     "vo": {
       "display_name": "Northward Current Velocity",
       "units": "m/s",
       "palette": "coolwarm",
-      "min": -0.47,
-      "max": 0.46
+      "min": -0.43,
+      "max": 0.43
     },
     "cur_speed": {
       "display_name": "Current Velocity Magnitude",
       "units": "m/s",
       "palette": "viridis",
       "min": 0.0,
-      "max": 0.59
+      "max": 0.54
     }
   }
 }

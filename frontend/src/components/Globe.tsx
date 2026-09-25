@@ -145,6 +145,10 @@ export default function Globe({
   const eezDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null);
   const territorialDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null);
 
+  // Track Land GeoJSON for Vector Coastline Alignment
+  const landGeoJsonRef = useRef<any>(null);
+  const [landMaskLoaded, setLandMaskLoaded] = useState<boolean>(false);
+
   // Track current-vector arrow entities for cleanup
   const arrowEntitiesRef = useRef<Cesium.Entity[]>([]);
 
@@ -191,6 +195,18 @@ export default function Globe({
 
   useEffect(() => {
     setIsMounted(true);
+
+    // Load authentic subcontinent land boundaries to perfectly punch out land
+    fetch("/subcontinent_land.geojson")
+      .then((res) => res.json())
+      .then((data) => {
+        landGeoJsonRef.current = data;
+        setLandMaskLoaded(true);
+        textureCacheRef.current.clear();
+      })
+      .catch((err) => {
+        console.warn("Could not load /subcontinent_land.geojson:", err);
+      });
   }, []);
 
   // 3D Navigation & Interaction States
@@ -378,7 +394,16 @@ export default function Globe({
       const cached = textureCacheRef.current.get(key);
       if (cached) return cached;
 
-      const canvas = gridToCanvas(values, minVal, maxVal, palette, scaleType, size, size);
+      const canvas = gridToCanvas(
+        values,
+        minVal,
+        maxVal,
+        palette,
+        scaleType,
+        size,
+        size,
+        landGeoJsonRef.current
+      );
       const dataUrl = canvas.toDataURL("image/png");
       textureCacheRef.current.set(key, dataUrl);
 
@@ -728,6 +753,7 @@ export default function Globe({
     selectedVariable,
     getCachedTexture,
     onSliceDataCalculated,
+    landMaskLoaded,
   ]);
 
   // Update 3D Volumetric Depth Slices Stack with memoized textures
@@ -898,6 +924,7 @@ export default function Globe({
     selectedVariable,
     timeIndex,
     onSliceDataCalculated,
+    landMaskLoaded,
   ]);
 
   // ── Current Vector Arrow Rendering ────────────────────────────────────

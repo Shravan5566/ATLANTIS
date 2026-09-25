@@ -127,13 +127,14 @@ export function gridToCanvas(
   paletteName: string = "thermal",
   scaleType: "linear" | "log" = "linear",
   targetWidth: number = 1024,
-  targetHeight: number = 1024
+  targetHeight: number = 1024,
+  landGeoJson?: any
 ): HTMLCanvasElement {
   const rows = values.length;
   const cols = values[0]?.length || 0;
 
-  const outW = Math.max(targetWidth, 1024);
-  const outH = Math.max(targetHeight, 1024);
+  const outW = Math.max(targetWidth, 512);
+  const outH = Math.max(targetHeight, 512);
 
   const canvas = document.createElement("canvas");
   canvas.width = outW;
@@ -238,5 +239,48 @@ export function gridToCanvas(
   }
 
   ctx.putImageData(imgData, 0, 0);
+
+  // Vector Coastline Punch-Out:
+  // Uses authentic country vector polygons to razor-cut land from the ocean raster
+  if (landGeoJson && landGeoJson.features) {
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "rgba(0, 0, 0, 1.0)";
+
+    for (const feat of landGeoJson.features) {
+      const geom = feat.geometry;
+      if (!geom) continue;
+      const polys =
+        geom.type === "MultiPolygon"
+          ? geom.coordinates
+          : geom.type === "Polygon"
+          ? [geom.coordinates]
+          : [];
+
+      for (const poly of polys) {
+        if (!poly || poly.length === 0) continue;
+        ctx.beginPath();
+        for (const ring of poly) {
+          if (!ring || ring.length < 3) continue;
+          for (let i = 0; i < ring.length; i++) {
+            const lon = ring[i][0];
+            const lat = ring[i][1];
+            // Coordinate mapping: Bounding box 68.0° to 90.0° Lon, 6.0° to 25.0° Lat
+            const px = ((lon - 68.0) / (90.0 - 68.0)) * (outW - 1);
+            const py = (1.0 - (lat - 6.0) / (25.0 - 6.0)) * (outH - 1);
+            if (i === 0) {
+              ctx.moveTo(px, py);
+            } else {
+              ctx.lineTo(px, py);
+            }
+          }
+          ctx.closePath();
+        }
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
   return canvas;
 }

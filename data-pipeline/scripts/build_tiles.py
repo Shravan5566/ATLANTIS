@@ -94,6 +94,44 @@ def apply_physical_bounds(values: np.ndarray, var: str) -> np.ndarray:
     return cleaned
 
 
+def get_subcontinent_land_mask(lats: np.ndarray, lons: np.ndarray) -> np.ndarray:
+    """Computes a high-precision 2D boolean mask (True for land, False for ocean)
+    using the authentic boundary polygons of India and the subcontinent."""
+    from PIL import Image, ImageDraw
+
+    land_file = DATA_PIPELINE_DIR / "raw" / "subcontinent_land.json"
+    if not land_file.exists():
+        land_file = DATA_PIPELINE_DIR.parent / "frontend" / "public" / "subcontinent_land.geojson"
+
+    W, H = len(lons), len(lats)
+    min_lon, max_lon = float(lons[0]), float(lons[-1])
+    min_lat, max_lat = float(lats[0]), float(lats[-1])
+
+    img = Image.new("1", (W, H), 0)  # 0 = ocean
+    draw = ImageDraw.Draw(img)
+
+    if land_file.exists():
+        with open(land_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        for feat in data.get("features", []):
+            geom = feat.get("geometry", {})
+            coords = geom.get("coordinates", [])
+            polys = coords if geom.get("type") == "MultiPolygon" else [coords]
+            for poly in polys:
+                ring = poly[0]
+                pts = []
+                for lon, lat in ring:
+                    px = (lon - min_lon) / (max_lon - min_lon) * (W - 1)
+                    py = (1.0 - (lat - min_lat) / (max_lat - min_lat)) * (H - 1)
+                    pts.append((px, py))
+                if len(pts) >= 3:
+                    draw.polygon(pts, fill=1)
+
+    mask_img = np.array(img, dtype=bool)
+    # Invert row axis because PIL py=0 is North, while lats[0]=6.0 is South
+    return mask_img[::-1, :]
+
+
 def generate_sample_netcdf(output_file: Path):
     """Generates a realistic synthetic Copernicus NetCDF file for India EEZ
 
@@ -122,27 +160,24 @@ def generate_sample_netcdf(output_file: Path):
 
     lat_2d, lon_2d = np.meshgrid(lats, lons, indexing="ij")
 
-    # Ocean mask (rough India land mask between lat 8-22, lon 73-86)
-    land_mask = (lat_2d > 8.5) & (lat_2d < 22.5) & (lon_2d > 73.0) & (lon_2d < 85.0)
-    # Refine peninsula triangle
-    tri_slope = (lat_2d - 8.5) / (22.5 - 8.5)
-    in_triangle = (lon_2d > (77.0 - 5.0 * tri_slope)) & (lon_2d < (77.0 + 7.0 * tri_slope))
-    land_mask = land_mask & in_triangle
+    # High-precision land mask using authentic subcontinent country boundaries
+    land_mask = get_subcontinent_land_mask(lats, lons)
 
     for t_idx in range(len(times)):
         for d_idx, d in enumerate(depths):
-            # Thermal stratification: surface 29°C -> deep 4°C
-            surface_temp = 29.5 - 0.15 * (lat_2d - 12.0) + 0.2 * np.sin(lon_2d / 4.0 + t_idx)
-            t_slice = 4.0 + (surface_temp - 4.0) * np.exp(-d / 220.0)
+            # Thermal stratification: tropical surface ~29.5-30°C decaying to abyssal ~4°C at 1,000m
+            surface_temp = 29.8 - 0.12 * (lat_2d - 10.0) + 0.3 * np.sin(lon_2d / 3.5 + t_idx * 0.2)
+            t_slice = 4.2 + (surface_temp - 4.2) * np.exp(-d / 220.0)
 
-            # Salinity: higher in Arabian Sea (>36), lower in Bay of Bengal (<34.5)
-            s_slice = 35.8 - 1.2 * ((lon_2d - 68.0) / 22.0) + 0.4 * (1.0 - np.exp(-d / 150.0))
+            # Salinity: higher in Arabian Sea (>36.2 PSU due to high evaporation),
+            # lower in Bay of Bengal (<33.8 PSU due to major freshwater river discharge)
+            s_slice = 36.4 - 2.6 * ((lon_2d - 68.0) / 22.0) + 0.35 * (1.0 - np.exp(-d / 150.0))
 
-            # Currents: East India Coastal Current & Arabian Sea circulation
-            u_slice = 0.4 * np.sin(lat_2d / 3.0 + t_idx) * np.exp(-d / 100.0)
-            v_slice = 0.5 * np.cos(lon_2d / 4.0) * np.exp(-d / 100.0)
+            # Ocean current circulation: West India Coastal Current & East India Coastal Current
+            u_slice = 0.35 * np.sin((lat_2d - 6.0) / 4.0 + t_idx * 0.3) * np.exp(-d / 120.0)
+            v_slice = 0.45 * np.cos((lon_2d - 68.0) / 5.0) * np.exp(-d / 120.0)
 
-            # Apply land mask
+            # Mask out land cleanly across India and neighboring coasts
             t_slice[land_mask] = np.nan
             s_slice[land_mask] = np.nan
             u_slice[land_mask] = np.nan
